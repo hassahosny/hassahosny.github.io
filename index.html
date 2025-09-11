@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>نظام إدارة المخزن</title>
+    <style>
+        /* --- ستايلات صفحة التحميل (الـ Loading Screen) --- */
+        #loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #0a0a0a;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            color: white;
+            font-size: 30px;
+            font-weight: bold;
+            animation: fadeIn 0.5s ease-out;
+            overflow: hidden; /* عشان لو الصورة كبيرة أوي متخرجش برا الشاشة */
+        }
+        #loading-screen img {
+            /* --- التعديل هنا يا باشا --- */
+            width: 80%;       /* خليها تاخد 80% من عرض الشاشة */
+            height: 80%;      /* و 80% من طول الشاشة */
+            object-fit: contain; /* دي عشان الصورة متتكسرش أو تتمط، هتخليها محتفظة بنسبها */
+            max-width: 500px; /* أقصى عرض (عشان متكبرش أوي على الشاشات الكبيرة) */
+            max-height: 500px; /* أقصى طول */
+            /* ------------------------- */
+            margin-bottom: 20px;
+            animation: flicker 1.5s infinite alternate;
+        }
+        #loading-screen p {
+            margin-top: 15px;
+            color: #ffc107;
+            font-size: 40px;
+            text-shadow: 0 0 10px #ffc107, 0 0 20px #ffc107;
+        }
+        /* --- حركة الوميض (Flicker Animation) --- */
+        @keyframes flicker {
+            0% { opacity: 1; }
+            50% { opacity: 0.6; }
+            100% { opacity: 1; }
+        }
+        /* --- حركة ظهور الصفحة (Fade In) --- */
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        /* --- ستايلات الصفحة الرئيسية (زي ما هي) --- */
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f4f9; color: #333; margin: 0; padding: 20px; }
+        .container { max-width: 1100px; margin: auto; background: #fff; padding: 25px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        h1, h2 { color: #0056b3; border-bottom: 2px solid #0056b3; padding-bottom: 10px; }
+        h3 { color: #333; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 14px; }
+        th, td { border: 1px solid #ddd; padding: 10px; text-align: right; vertical-align: middle; }
+        th { background-color: #007bff; color: white; }
+        tr:nth-child(even) { background-color: #f2f2f2; }
+        form { display: flex; flex-direction: column; gap: 15px; }
+        input { padding: 10px; border: 1px solid #ccc; border-radius: 4px; }
+        button { padding: 10px 15px; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; margin-left: 5px; }
+        button:hover { opacity: 0.9; }
+        .add-btn { background-color: #28a745; }
+        .delete-btn { background-color: #dc3545; padding: 6px 10px; font-size: 14px; }
+        .add-to-invoice-btn { background-color: #17a2b8; padding: 6px 10px; font-size: 14px; }
+        .invoice-section, .archive-section { border: 2px dashed #007bff; padding: 20px; margin-top: 30px; border-radius: 8px; }
+        .archive-section { border-color: #6c757d; }
+        .total-price { font-size: 24px; color: #28a745; font-weight: bold; }
+        #saveInvoiceBtn { background-color: #ffc107; color: black; }
+        .refill-btn { background-color: #007bff; padding: 6px 10px; font-size: 14px; }
+        .print-btn { background-color: #6c757d; padding: 6px 10px; font-size: 14px; }
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            padding: 20px;
+            color: #666;
+            font-size: 14px;
+            border-top: 1px solid #eee;
+        }
+        .footer span {
+            color: #0056b3;
+            font-weight: bold;
+        }
+
+        @media print {
+            body > *:not(.invoice-box) { display: none; }
+            .invoice-box {
+                box-shadow: none !important;
+                border: none !important;
+                max-width: 100% !important;
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="loading-screen">
+        <img src="loading.png" alt="جاري التحميل..."> <p>موقع أخويا نوس</p>
+    </div>
+
+    <div class="container" id="main-content" style="display:none;"> <h1>نظام المخزن والفواتير (نقطة بيع)</h1>
+
+        <h2>الأصناف في المخزن</h2>
+        <table id="inventoryTable">
+            <thead><tr><th>اسم الصنف</th><th>الكمية المتاحة</th><th>السعر</th><th>إجراءات</th></tr></thead>
+            <tbody></tbody>
+        </table>
+        <hr>
+        <h2>إضافة صنف جديد</h2>
+        <form id="addItemForm">
+            <input type="text" id="itemName" placeholder="اسم الصنف" required><input type="number" id="itemQuantity" placeholder="الكمية" required><input type="number" id="itemPrice" placeholder="السعر" required>
+            <button type="submit" class="add-btn">إضافة الصنف</button>
+        </form>
+
+        <div class="invoice-section">
+            <h2>الفاتورة الحالية</h2>
+            <table id="invoiceTable">
+                <thead><tr><th>اسم الصنف</th><th>الكمية</th><th>سعر الوحدة</th><th>الإجمالي</th></tr></thead>
+                <tbody></tbody>
+            </table>
+            <h3>الإجمالي النهائي: <span id="invoiceTotal" class="total-price">0</span> جنيه</h3>
+            <button id="saveInvoiceBtn" onclick="saveInvoice()">حفظ وختم الفاتورة</button>
+        </div>
+
+        <div class="archive-section">
+            <h2>أرشيف الفواتير المحفوظة</h2>
+            <table id="archiveTable">
+                <thead><tr><th>رقم الفاتورة</th><th>التاريخ</th><th>اسم العميل</th><th>الإجمالي</th><th>إجراءات</th></tr></thead>
+                <tbody></tbody>
+            </table>
+        </div>
+
+        <div class="footer">
+            &copy; 2023 كل الحقوق محفوظة لموقع أخويا <span>نوس</span>
+        </div>
+    </div>
+
+    <script>
+        // --- أول حاجة خالص، بنشغل شاشة التحميل ---
+        window.addEventListener('load', () => {
+            const loadingScreen = document.getElementById('loading-screen');
+            const mainContent = document.getElementById('main-content');
+
+            setTimeout(() => {
+                loadingScreen.style.display = 'none'; // بنخفي شاشة التحميل
+                mainContent.style.display = 'block'; // بنظهر المحتوى الرئيسي
+            }, 6000); // 6 ثواني بالظبط زي ما طلبت يا كبير
+        });
+
+        let currentInvoice = [];
+
+        document.addEventListener('DOMContentLoaded', () => {
+            renderInventoryTable();
+            renderArchiveTable();
+        });
+
+        // --- وظايف المخزن ---
+        function getInventory() { return JSON.parse(localStorage.getItem('inventory')) || []; }
+        function saveInventory(inventory) { localStorage.setItem('inventory', JSON.stringify(inventory)); }
+        function renderInventoryTable() {
+            const inventory = getInventory();
+            const invTableBody = document.querySelector('#inventoryTable tbody');
+            invTableBody.innerHTML = '';
+            inventory.forEach((item, index) => {
+                const row = invTableBody.insertRow();
+                row.innerHTML = `<td>${item.name}</td><td>${item.quantity}</td><td>${item.price} جنيه</td>
+                <td>
+                    <button class="refill-btn" onclick="refillItem(${index})">تزويد</button>
+                    <button class="add-to-invoice-btn" onclick="addToInvoice(${index})">إضافة للفاتورة</button>
+                    <button class="delete-btn" onclick="deleteItem(${index})">مسح</button>
+                </td>`;
+            });
+        }
+        document.getElementById('addItemForm').addEventListener('submit', function(event) {
+            event.preventDefault();
+            const name = document.getElementById('itemName').value;
+            const quantity = parseInt(document.getElementById('itemQuantity').value);
+            const price = parseFloat(document.getElementById('itemPrice').value);
+            if (!name || !quantity || !price) { alert('كله لازم يتملي يا وحش!'); return; }
+            const inventory = getInventory();
+            inventory.push({ name, quantity, price });
+            saveInventory(inventory);
+            renderInventoryTable();
+            this.reset();
+        });
+        function deleteItem(index) {
+            if (confirm('متأكد هتمسح الصنف ده خالص؟')) {
+                let inventory = getInventory();
+                inventory.splice(index, 1);
+                saveInventory(inventory);
+                renderInventoryTable();
+            }
+        }
+        
+        // --- وظيفة التزويد ---
+        function refillItem(index) {
+            const refillQuantity = parseInt(prompt("هتزود كام قطعة على الصنف ده؟"));
+            if (!refillQuantity || refillQuantity <= 0) {
+                alert("لازم تدخل كمية صح.");
+                return;
+            }
+            let inventory = getInventory();
+            inventory[index].quantity += refillQuantity;
+            saveInventory(inventory);
+            renderInventoryTable();
+            alert("تمام، تم تزويد المخزن.");
+        }
+
+        // --- وظايف الفاتورة الحالية ---
+        function addToInvoice(itemIndex) {
+            let inventory = getInventory();
+            const item = inventory[itemIndex];
+            if (item.quantity <= 0) { alert("الصنف ده خلصان يا كبير!"); return; }
+            const quantityToAdd = parseInt(prompt(`عايز كام قطعة من "${item.name}"؟\nالمتاح: ${item.quantity}`));
+            if (!quantityToAdd || quantityToAdd <= 0 || quantityToAdd > item.quantity) {
+                alert("كمية غلط يا معلم."); return;
+            }
+            inventory[itemIndex].quantity -= quantityToAdd;
+            saveInventory(inventory);
+            const existingItem = currentInvoice.find(invItem => invItem.name === item.name);
+            if (existingItem) {
+                existingItem.quantity += quantityToAdd;
+                existingItem.total = existingItem.quantity * existingItem.price;
+            } else {
+                currentInvoice.push({ name: item.name, quantity: quantityToAdd, price: item.price, total: quantityToAdd * item.price });
+            }
+            renderInventoryTable();
+            renderInvoiceTable();
+        }
+        function renderInvoiceTable() {
+            const invcTableBody = document.querySelector('#invoiceTable tbody');
+            invcTableBody.innerHTML = '';
+            let total = 0;
+            currentInvoice.forEach(item => {
+                const row = invcTableBody.insertRow();
+                row.innerHTML = `<td>${item.name}</td><td>${item.quantity}</td><td>${item.price} جنيه</td><td>${item.total.toFixed(2)} جنيه</td>`;
+                total += item.total;
+            });
+            document.getElementById('invoiceTotal').textContent = total.toFixed(2);
+        }
+
+        // --- وظايف الأرشيف ---
+        function getArchivedInvoices() { return JSON.parse(localStorage.getItem('invoices')) || []; }
+        function saveArchivedInvoices(invoices) { localStorage.setItem('invoices', JSON.stringify(invoices)); }
+        
+        function saveInvoice() {
+            if (currentInvoice.length === 0) { alert("الفاتورة فاضية يا كبير!"); return; }
+            const customerName = prompt("الفاتورة دي باسم مين؟ (دوس OK لو من غير اسم)") || "زبون كاش";
+            const totalAmount = currentInvoice.reduce((sum, item) => sum + item.total, 0);
+            const newInvoice = {
+                id: Date.now(),
+                date: new Date().toLocaleString('ar-EG'),
+                customer: customerName,
+                items: currentInvoice,
+                total: totalAmount
+            };
+            const allInvoices = getArchivedInvoices();
+            allInvoices.push(newInvoice);
+            saveArchivedInvoices(allInvoices);
+            alert(`تمام يا ريس، الفاتورة اتحفظت برقم ${newInvoice.id}`);
+            currentInvoice = [];
+            renderInvoiceTable();
+            renderArchiveTable();
+        }
+        
+        function renderArchiveTable() {
+            const archiveTableBody = document.querySelector('#archiveTable tbody');
+            archiveTableBody.innerHTML = '';
+            const allInvoices = getArchivedInvoices();
+            allInvoices.slice().reverse().forEach(invoice => {
+                const row = archiveTableBody.insertRow();
+                row.innerHTML = `
+                    <td>${invoice.id}</td>
+                    <td>${invoice.date}</td>
+                    <td>${invoice.customer}</td>
+                    <td>${invoice.total.toFixed(2)} جنيه</td>
+                    <td>
+                        <button class="print-btn" onclick="viewInvoice(${invoice.id})">عرض وطباعة</button>
+                    </td>`;
+            });
+        }
+        
+        // --- وظيفة الطباعة ---
+        function viewInvoice(invoiceId) {
+            const allInvoices = getArchivedInvoices();
+            const invoice = allInvoices.find(inv => inv.id === invoiceId);
+            if (!invoice) { alert("الفاتورة دي مش موجودة!"); return; }
+
+            let invoiceHTML = `
+                <html><head><title>فاتورة رقم ${invoice.id}</title>
+                <style>
+                    body { font-family: 'Segoe UI', Tahoma, sans-serif; direction: rtl; }
+                    .invoice-box { max-width: 800px; margin: auto; padding: 30px; border: 1px solid #eee; box-shadow: 0 0 10px rgba(0, 0, 0, 0.15); font-size: 16px; line-height: 24px; }
+                    .invoice-box table { width: 100%; line-height: inherit; text-align: right; }
+                    .invoice-box table td { padding: 5px; vertical-align: top; }
+                    .invoice-box table tr.heading td { background: #eee; border-bottom: 1px solid #ddd; font-weight: bold; }
+                    .invoice-box table tr.item td { border-bottom: 1px solid #eee; }
+                    .invoice-box table tr.total td:last-child { border-top: 2px solid #eee; font-weight: bold; }
+                    .footer-print { text-align: center; margin-top: 30px; font-size: 12px; color: #666; }
+                    .footer-print span { color: #0056b3; font-weight: bold; }
+                </style></head><body>
+                <div class="invoice-box">
+                    <h2>فاتورة ضريبية مبسطة</h2>
+                    <p>
+                        <b>رقم الفاتورة:</b> ${invoice.id}<br>
+                        <b>تاريخ الإصدار:</b> ${invoice.date}<br>
+                        <b>اسم العميل:</b> ${invoice.customer}
+                    </p>
+                    <table>
+                        <tr class="heading"><td>الصنف</td><td>الكمية</td><td>سعر الوحدة</td><td>الإجمالي</td></tr>`;
+            
+            invoice.items.forEach(item => {
+                invoiceHTML += `<tr class="item">
+                    <td>${item.name}</td>
+                    <td>${item.quantity}</td>
+                    <td>${item.price.toFixed(2)} جنيه</td>
+                    <td>${item.total.toFixed(2)} جنيه</td>
+                </tr>`;
+            });
+
+            invoiceHTML += `
+                        <tr class="total"><td></td><td></td><td><b>الإجمالي النهائي:</b></td><td><b>${invoice.total.toFixed(2)} جنيه</b></td></tr>
+                    </table>
+                    <div class="footer-print">
+                        &copy; 2023 كل الحقوق محفوظة لموقع أخويا <span>نوس</span>
+                    </div>
+                </div>
+            </body></html>`;
+            
+            const printWindow = window.open('', '', 'height=600,width=800');
+            printWindow.document.write(invoiceHTML);
+            printWindow.document.close();
+            printWindow.focus();
+            setTimeout(() => { printWindow.print(); }, 500);
+        }
+    </script>
+</body>
+</html>
