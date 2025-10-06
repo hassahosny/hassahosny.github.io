@@ -24,6 +24,7 @@
             --color-text: #e0e0e0;
             --color-danger: #ff5555;
             --color-warn: #ffaa00;
+            --color-success: #22c55e;
         }
         .bg-main { background-color: var(--color-bg); }
         .bg-panel { background-color: var(--color-panel); }
@@ -54,6 +55,10 @@
         .btn-secondary {
             background-color: #4a4a4a;
             color: var(--color-text);
+        }
+        .btn-success {
+            background-color: var(--color-success);
+            color: var(--color-bg);
         }
         button:disabled {
             opacity: 0.5;
@@ -100,16 +105,19 @@
                 <p class="text-sm text-gray-400">المستخدم الحالي: <span id="current-user" class="font-bold"></span></p>
             </div>
             <div class="flex items-center gap-4 md:gap-6 text-sm md:text-base">
+                 <div class="text-center">
+                    <button id="shift-btn" class="font-bold px-4 py-2 rounded-lg"></button>
+                </div>
                 <div class="text-center">
-                    <span class="text-gray-400 block">الإيرادات</span>
+                    <span class="text-gray-400 block">إيرادات الشيفت</span>
                     <span id="revenue-label" class="font-bold text-accent">0.00 EGP</span>
                 </div>
                  <div class="text-center">
-                    <span class="text-gray-400 block">المصروفات</span>
+                    <span class="text-gray-400 block">مصروفات الشيفت</span>
                     <span id="expenses-label" class="font-bold text-danger">0.00 EGP</span>
                 </div>
                  <div class="text-center">
-                    <span class="text-gray-400 block">الصافي</span>
+                    <span class="text-gray-400 block">صافي الشيفت</span>
                     <span id="net-label" class="font-bold text-white">0.00 EGP</span>
                 </div>
                 <button id="admin-panel-btn" class="hidden bg-warn text-black px-4 py-2 rounded-lg font-bold hover:bg-yellow-500">لوحة التحكم</button>
@@ -118,6 +126,9 @@
         </header>
 
         <main class="p-4 md:p-6">
+            <div id="no-shift-overlay" class="hidden absolute inset-0 bg-black bg-opacity-70 flex items-center justify-center z-40">
+                <p class="text-2xl font-bold text-warn">يرجى بدء الشيفت لتفعيل الأجهزة</p>
+            </div>
             <div id="devices-container" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
                 <!-- Device cards will be dynamically inserted here -->
             </div>
@@ -166,7 +177,7 @@
 
     <!-- Admin Panel Modal -->
     <div id="admin-modal" class="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-[60] hidden">
-        <div class="bg-panel rounded-lg shadow-lg p-6 w-full max-w-4xl h-5/6 flex flex-col">
+        <div class="bg-panel rounded-lg shadow-lg p-6 w-full max-w-5xl h-5/6 flex flex-col">
             <div class="flex justify-between items-center mb-4 border-b border-gray-700 pb-3">
                 <h3 class="text-2xl font-bold text-primary">لوحة تحكم المدير</h3>
                 <button id="close-admin-modal" class="text-gray-400 hover:text-white text-3xl">&times;</button>
@@ -174,21 +185,15 @@
             <!-- Tabs -->
             <div class="flex border-b border-gray-600 mb-4">
                 <button class="admin-tab-btn flex-1 py-2 text-center border-b-2 border-primary" data-tab="user-management">إدارة المستخدمين</button>
+                <button class="admin-tab-btn flex-1 py-2 text-center border-b-2 border-transparent text-gray-400" data-tab="shift-history">سجل الشيفتات</button>
                 <button class="admin-tab-btn flex-1 py-2 text-center border-b-2 border-transparent text-gray-400" data-tab="activity-log">سجل النشاط</button>
             </div>
             <!-- Tab Content -->
             <div class="flex-grow overflow-y-auto">
-                 <!-- User Management Tab -->
-                 <div id="user-management-tab" class="admin-tab-content">
-                    <h4 class="text-xl font-bold mb-4">إدارة المستخدمين</h4>
-                    <div id="user-list-container" class="space-y-4"></div>
-                </div>
-                <!-- Activity Log Tab -->
-                <div id="activity-log-tab" class="admin-tab-content hidden">
-                    <div class="flex justify-between items-center mb-4">
-                         <h4 id="activity-log-title" class="text-xl font-bold">سجل النشاط (آخر 100 حركة)</h4>
-                         <button id="show-all-activity-btn" class="btn-secondary px-4 py-1 rounded hidden">عرض الكل</button>
-                    </div>
+                 <div id="user-management-tab" class="admin-tab-content"><h4 class="text-xl font-bold mb-4">إدارة المستخدمين</h4><div id="user-list-container" class="space-y-4"></div></div>
+                 <div id="shift-history-tab" class="admin-tab-content hidden"><h4 class="text-xl font-bold mb-4">سجل الشيفتات</h4><div id="shift-history-container" class="space-y-4"></div></div>
+                 <div id="activity-log-tab" class="admin-tab-content hidden">
+                    <div class="flex justify-between items-center mb-4"><h4 id="activity-log-title" class="text-xl font-bold"></h4><button id="show-all-activity-btn" class="btn-secondary px-4 py-1 rounded hidden">عرض الكل</button></div>
                     <div id="activity-log-container" class="space-y-2 font-mono text-sm pr-2"></div>
                 </div>
             </div>
@@ -214,10 +219,12 @@
             const currentUserSpan = document.getElementById('current-user');
             const logoutBtn = document.getElementById('logout-btn');
             const adminPanelBtn = document.getElementById('admin-panel-btn');
+            const shiftBtn = document.getElementById('shift-btn');
             const devicesContainer = document.getElementById('devices-container');
             const revenueLabel = document.getElementById('revenue-label');
             const expensesLabel = document.getElementById('expenses-label');
             const netLabel = document.getElementById('net-label');
+            const noShiftOverlay = document.getElementById('no-shift-overlay');
             
             const startSessionModal = document.getElementById('start-session-modal');
             const addItemModal = document.getElementById('add-item-modal');
@@ -229,7 +236,7 @@
 
             let currentDeviceToStart = null, currentDeviceToAddItem = null, currentDeviceToEnd = null;
             let appState = {};
-            let activityLogFilter = null; // To filter activity by user
+            let activityLogFilter = null;
 
             // --- STATE MANAGEMENT ---
             function saveState() {
@@ -244,6 +251,8 @@
                     appState = {
                         sessions: {},
                         financials: { revenue: 0, expenses: 0 },
+                        shiftActive: false,
+                        shiftHistory: [],
                         users: {
                             "admin@kayan.com": { password: "admin123", name: "المدير" },
                             "test@kayan.com": { password: "123456", name: "موظف مؤقت" }
@@ -251,10 +260,11 @@
                         activityLog: []
                     };
                 }
-                if (!appState.users) {
-                     appState.users = { "admin@kayan.com": { password: "admin123", name: "المدير" }, "test@kayan.com": { password: "123456", name: "موظف مؤقت" } };
-                }
+                // Ensure all keys exist for backward compatibility
+                if (!appState.users) appState.users = { "admin@kayan.com": { password: "admin123", name: "المدير" }, "test@kayan.com": { password: "123456", name: "موظف مؤقت" } };
                 if (!appState.activityLog) appState.activityLog = [];
+                if (typeof appState.shiftActive === 'undefined') appState.shiftActive = false;
+                if (!appState.shiftHistory) appState.shiftHistory = [];
 
                 renderAll();
             }
@@ -264,15 +274,13 @@
                 const userEmail = localStorage.getItem('kayanLoggedInUser') || 'System';
                 appState.activityLog.unshift({
                     timestamp: new Date().toISOString(),
-                    user: userEmail,
-                    action: action,
-                    details: details
+                    user: userEmail, action, details
                 });
                 if (appState.activityLog.length > 100) appState.activityLog.pop();
                 saveState();
             }
 
-            // --- AUTHENTICATION ---
+            // --- AUTH & SHIFT ---
             function checkLogin() {
                 const loggedInUser = localStorage.getItem('kayanLoggedInUser');
                 if (loggedInUser && appState.users[loggedInUser]) {
@@ -299,10 +307,39 @@
             });
 
             logoutBtn.addEventListener('click', () => {
+                if(appState.shiftActive) {
+                    showNotification("لا يمكن تسجيل الخروج أثناء وجود شيفت مفتوح. يرجى إنهاء الشيفت أولاً.");
+                    return;
+                }
                 logActivity('تسجيل الخروج');
                 localStorage.removeItem('kayanLoggedInUser');
                 if (window.timerInterval) clearInterval(window.timerInterval);
                 checkLogin();
+            });
+
+            shiftBtn.addEventListener('click', () => {
+                if (appState.shiftActive) { // End shift
+                    if (Object.keys(appState.sessions).length > 0) {
+                        showNotification('لا يمكن إنهاء الشيفت وهناك جلسات مفتوحة.');
+                        return;
+                    }
+                    const shiftData = {
+                        user: localStorage.getItem('kayanLoggedInUser'),
+                        startTime: appState.shiftStartTime,
+                        endTime: new Date().toISOString(),
+                        ...appState.financials
+                    };
+                    appState.shiftHistory.unshift(shiftData);
+                    logActivity('إنهاء الشيفت', { revenue: shiftData.revenue.toFixed(2), expenses: shiftData.expenses.toFixed(2) });
+                    appState.shiftActive = false;
+                } else { // Start shift
+                    appState.shiftActive = true;
+                    appState.shiftStartTime = new Date().toISOString();
+                    appState.financials = { revenue: 0, expenses: 0 };
+                    logActivity('بدء الشيفت');
+                }
+                saveState();
+                renderAll();
             });
 
             function showAppUI(userName) {
@@ -319,9 +356,22 @@
                 appScreen.classList.add('hidden');
             }
             
+            // --- UI RENDERING ---
             function renderAll() {
+                toggleShiftUI();
                 renderDevices();
                 updateFinancialDisplay();
+            }
+            
+            function toggleShiftUI() {
+                noShiftOverlay.classList.toggle('hidden', appState.shiftActive);
+                if (appState.shiftActive) {
+                    shiftBtn.textContent = 'إنهاء الشيفت';
+                    shiftBtn.className = 'font-bold px-4 py-2 rounded-lg btn-danger';
+                } else {
+                    shiftBtn.textContent = 'بدء الشيفت';
+                    shiftBtn.className = 'font-bold px-4 py-2 rounded-lg btn-success';
+                }
             }
 
             function renderDevices() {
@@ -384,6 +434,7 @@
                 });
             }
 
+            // --- CORE FUNCTIONALITY ---
             function startSession(deviceName, deviceType, sessionType, minutes, customerName) {
                 const startTime = new Date();
                 const endTime = minutes > 0 ? new Date(startTime.getTime() + minutes * 60000) : null;
@@ -414,6 +465,7 @@
                 } else { showNotification("حدث خطأ أثناء إضافة المنتج."); }
             }
 
+            // --- MODALS & UI ---
             function showNotification(message) {
                 notificationMessage.innerHTML = message;
                 notificationModal.classList.remove('hidden');
@@ -478,7 +530,7 @@
 
             // --- ADMIN PANEL ---
             adminPanelBtn.addEventListener('click', () => {
-                activityLogFilter = null; // Reset filter when opening
+                activityLogFilter = null;
                 renderAdminPanel();
                 adminModal.classList.remove('hidden');
             });
@@ -487,7 +539,7 @@
             function renderAdminPanel() {
                 renderUserManagementTab();
                 renderActivityLogTab();
-                // Set default tab view
+                renderShiftHistoryTab();
                 switchTab('user-management');
             }
             
@@ -505,11 +557,8 @@
 
             function renderUserManagementTab() {
                 const container = document.getElementById('user-list-container');
-                container.innerHTML = '';
-                Object.entries(appState.users).forEach(([email, userData]) => {
-                    const userDiv = document.createElement('div');
-                    userDiv.className = 'bg-gray-800 p-4 rounded-lg flex justify-between items-center';
-                    userDiv.innerHTML = `
+                container.innerHTML = Object.entries(appState.users).map(([email, userData]) => `
+                    <div class="bg-gray-800 p-4 rounded-lg flex justify-between items-center">
                         <div>
                             <p class="font-bold">${userData.name}</p>
                             <p class="text-sm text-gray-400">${email}</p>
@@ -524,22 +573,18 @@
                                     <button class="cancel-pass-btn btn-danger px-3 py-1 rounded">X</button>
                                 </div>
                             </div>
-                        </div>`;
-                    container.appendChild(userDiv);
-                });
+                        </div>
+                    </div>`
+                ).join('');
             }
 
             document.getElementById('user-list-container').addEventListener('click', (e) => {
                 const target = e.target;
-
-                // Handle Monitor Button
                 if(target.classList.contains('monitor-activity-btn')) {
                     activityLogFilter = target.dataset.email;
                     switchTab('activity-log');
                     renderActivityLogTab();
                 }
-
-                // Handle Password Change
                 const container = target.closest('.change-password-container');
                 if (!container) return;
                 if (target.classList.contains('change-pass-btn')) {
@@ -569,42 +614,42 @@
                 const container = document.getElementById('activity-log-container');
                 const title = document.getElementById('activity-log-title');
                 const showAllBtn = document.getElementById('show-all-activity-btn');
-
-                let logsToShow = appState.activityLog;
-                if (activityLogFilter) {
-                    logsToShow = appState.activityLog.filter(log => log.user === activityLogFilter);
-                    title.textContent = `سجل نشاط المستخدم: ${activityLogFilter}`;
-                    showAllBtn.classList.remove('hidden');
-                } else {
-                    title.textContent = 'سجل النشاط (آخر 100 حركة)';
-                    showAllBtn.classList.add('hidden');
-                }
-
+                let logsToShow = activityLogFilter ? appState.activityLog.filter(log => log.user === activityLogFilter) : appState.activityLog;
+                title.textContent = activityLogFilter ? `سجل نشاط المستخدم: ${activityLogFilter}`: 'سجل النشاط (آخر 100 حركة)';
+                showAllBtn.classList.toggle('hidden', !activityLogFilter);
                 container.innerHTML = logsToShow.map(log => {
                     const logTime = new Date(log.timestamp).toLocaleString('ar-EG', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
                     const details = Object.entries(log.details).map(([key, value]) => `${key}: ${value}`).join(' | ');
-                    return `
-                        <div class="bg-gray-800 p-2 rounded flex items-start">
-                            <span class="text-accent ml-3">[${logTime}]</span>
-                            <div class="flex-grow">
-                                <span class="text-warn font-bold">${log.user}</span>:
-                                <span class="text-main">${log.action}</span>
-                                ${details ? `<span class="text-gray-400 text-xs block">${details}</span>` : ''}
-                            </div>
-                        </div>`;
-                }).join('');
-                if (logsToShow.length === 0) {
-                     container.innerHTML = `<p class="text-gray-500">لا يوجد نشاط مسجل لهذا المستخدم.</p>`;
-                }
+                    return `<div class="bg-gray-800 p-2 rounded flex items-start"><span class="text-accent ml-3">[${logTime}]</span><div class="flex-grow"><span class="text-warn font-bold">${log.user}</span>: <span class="text-main">${log.action}</span>${details ? `<span class="text-gray-400 text-xs block">${details}</span>` : ''}</div></div>`;
+                }).join('') || `<p class="text-gray-500">لا يوجد نشاط مسجل.</p>`;
             }
             
+            function renderShiftHistoryTab() {
+                const container = document.getElementById('shift-history-container');
+                 container.innerHTML = appState.shiftHistory.map(shift => {
+                    const startTime = new Date(shift.startTime).toLocaleString('ar-EG');
+                    const endTime = new Date(shift.endTime).toLocaleString('ar-EG');
+                    const net = shift.revenue - shift.expenses;
+                    return `
+                        <div class="bg-gray-800 p-4 rounded-lg">
+                            <p class="font-bold text-lg">الموظف: <span class="text-primary">${shift.user}</span></p>
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-2 text-center">
+                                <div><p class="text-gray-400 text-sm">بداية الشيفت</p><p>${startTime}</p></div>
+                                <div><p class="text-gray-400 text-sm">نهاية الشيفت</p><p>${endTime}</p></div>
+                                <div><p class="text-gray-400 text-sm">الإيرادات</p><p class="text-accent font-bold">${shift.revenue.toFixed(2)}</p></div>
+                                <div><p class="text-gray-400 text-sm">الصافي</p><p class="text-white font-bold">${net.toFixed(2)}</p></div>
+                            </div>
+                        </div>`;
+                 }).join('') || `<p class="text-gray-500">لا يوجد شيفتات مسجلة بعد.</p>`;
+            }
+
             document.getElementById('show-all-activity-btn').addEventListener('click', () => {
                 activityLogFilter = null;
                 renderActivityLogTab();
             });
 
             document.querySelectorAll('.admin-tab-btn').forEach(button => {
-                button.addEventListener('click', () => switchTab(button.dataset.tab));
+                button.addEventListener('click', (e) => switchTab(e.target.dataset.tab));
             });
 
             // --- INITIALIZATION ---
@@ -614,4 +659,5 @@
     </script>
 </body>
 </html>
+
 
