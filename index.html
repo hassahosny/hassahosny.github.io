@@ -3,343 +3,615 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>نظام إدارة المخزن</title>
+    <title>نظام إدارة سايبر كيان (بدون انترنت)</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts (Cairo for Arabic) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet">
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
     <style>
-        /* --- ستايلات صفحة التحميل (الـ Loading Screen) --- */
-        #loading-screen {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: #0a0a0a;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            z-index: 9999;
-            color: white;
-            font-size: 30px;
-            font-weight: bold;
-            animation: fadeIn 0.5s ease-out;
-            overflow: hidden; /* عشان لو الصورة كبيرة أوي متخرجش برا الشاشة */
+        /* Custom styles and theme variables */
+        body {
+            font-family: 'Cairo', sans-serif;
+            --color-bg: #1e1e1e;
+            --color-panel: #2d2d2d;
+            --color-primary: #00aaff;
+            --color-accent: #00ffaa;
+            --color-text: #e0e0e0;
+            --color-danger: #ff5555;
+            --color-warn: #ffaa00;
         }
-        #loading-screen img {
-            /* --- التعديل هنا يا باشا --- */
-            width: 80%;       /* خليها تاخد 80% من عرض الشاشة */
-            height: 80%;      /* و 80% من طول الشاشة */
-            object-fit: contain; /* دي عشان الصورة متتكسرش أو تتمط، هتخليها محتفظة بنسبها */
-            max-width: 500px; /* أقصى عرض (عشان متكبرش أوي على الشاشات الكبيرة) */
-            max-height: 500px; /* أقصى طول */
-            /* ------------------------- */
-            margin-bottom: 20px;
-            animation: flicker 1.5s infinite alternate;
+        .bg-main { background-color: var(--color-bg); }
+        .bg-panel { background-color: var(--color-panel); }
+        .text-primary { color: var(--color-primary); }
+        .text-accent { color: var(--color-accent); }
+        .text-main { color: var(--color-text); }
+        .text-danger { color: var(--color-danger); }
+        .text-warn { color: var(--color-warn); }
+        .border-accent { border-color: var(--color-accent); }
+        .border-danger { border-color: var(--color-danger); }
+        .shadow-accent { box-shadow: 0 0 15px var(--color-accent); }
+        .btn-primary {
+            background-color: var(--color-primary);
+            color: var(--color-bg);
+            transition: all 0.2s ease-in-out;
         }
-        #loading-screen p {
-            margin-top: 15px;
-            color: #ffc107;
-            font-size: 40px;
-            text-shadow: 0 0 10px #ffc107, 0 0 20px #ffc107;
+        .btn-primary:hover:not(:disabled) {
+            background-color: var(--color-accent);
+            transform: translateY(-2px);
         }
-        /* --- حركة الوميض (Flicker Animation) --- */
-        @keyframes flicker {
-            0% { opacity: 1; }
-            50% { opacity: 0.6; }
-            100% { opacity: 1; }
+        .btn-danger {
+             background-color: var(--color-danger);
+            color: var(--color-text);
         }
-        /* --- حركة ظهور الصفحة (Fade In) --- */
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
+        .btn-danger:hover:not(:disabled) {
+            background-color: #ff2222;
         }
-
-        /* --- ستايلات الصفحة الرئيسية (زي ما هي) --- */
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f4f9; color: #333; margin: 0; padding: 20px; }
-        .container { max-width: 1100px; margin: auto; background: #fff; padding: 25px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-        h1, h2 { color: #0056b3; border-bottom: 2px solid #0056b3; padding-bottom: 10px; }
-        h3 { color: #333; }
-        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 14px; }
-        th, td { border: 1px solid #ddd; padding: 10px; text-align: right; vertical-align: middle; }
-        th { background-color: #007bff; color: white; }
-        tr:nth-child(even) { background-color: #f2f2f2; }
-        form { display: flex; flex-direction: column; gap: 15px; }
-        input { padding: 10px; border: 1px solid #ccc; border-radius: 4px; }
-        button { padding: 10px 15px; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; margin-left: 5px; }
-        button:hover { opacity: 0.9; }
-        .add-btn { background-color: #28a745; }
-        .delete-btn { background-color: #dc3545; padding: 6px 10px; font-size: 14px; }
-        .add-to-invoice-btn { background-color: #17a2b8; padding: 6px 10px; font-size: 14px; }
-        .invoice-section, .archive-section { border: 2px dashed #007bff; padding: 20px; margin-top: 30px; border-radius: 8px; }
-        .archive-section { border-color: #6c757d; }
-        .total-price { font-size: 24px; color: #28a745; font-weight: bold; }
-        #saveInvoiceBtn { background-color: #ffc107; color: black; }
-        .refill-btn { background-color: #007bff; padding: 6px 10px; font-size: 14px; }
-        .print-btn { background-color: #6c757d; padding: 6px 10px; font-size: 14px; }
-        .footer {
-            text-align: center;
-            margin-top: 40px;
-            padding: 20px;
-            color: #666;
-            font-size: 14px;
-            border-top: 1px solid #eee;
+        .btn-secondary {
+            background-color: #4a4a4a;
+            color: var(--color-text);
         }
-        .footer span {
-            color: #0056b3;
-            font-weight: bold;
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
         }
-
-        @media print {
-            body > *:not(.invoice-box) { display: none; }
-            .invoice-box {
-                box-shadow: none !important;
-                border: none !important;
-                max-width: 100% !important;
-                margin: 0 !important;
-                padding: 0 !important;
-            }
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(0, 255, 170, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(0, 255, 170, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(0, 255, 170, 0); }
         }
+        .animate-pulse-once { animation: pulse 1.5s; }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: var(--color-panel); }
+        ::-webkit-scrollbar-thumb { background: #555; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--color-primary); }
     </style>
 </head>
-<body>
-    <div id="loading-screen">
-        <img src="loading.png" alt="جاري التحميل..."> <p>موقع أخويا نوس</p>
+<body class="bg-main text-main">
+
+    <!-- Login Screen -->
+    <div id="login-screen" class="min-h-screen flex items-center justify-center bg-main">
+        <div class="bg-panel p-8 rounded-lg shadow-lg w-full max-w-sm">
+            <h2 class="text-3xl font-bold text-center text-primary mb-6">سايبر كيان - تسجيل الدخول</h2>
+            <form id="login-form">
+                <div class="mb-4">
+                    <label for="email" class="block mb-2 text-sm font-medium">اسم المستخدم (إيميل)</label>
+                    <input type="email" id="email" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-primary focus:border-primary block w-full p-2.5" placeholder="user@example.com" required>
+                </div>
+                <div class="mb-6">
+                    <label for="password" class="block mb-2 text-sm font-medium">كلمة المرور</label>
+                    <input type="password" id="password" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-primary focus:border-primary block w-full p-2.5" required>
+                </div>
+                <button type="submit" class="w-full btn-primary font-bold rounded-lg text-sm px-5 py-2.5 text-center">تسجيل الدخول</button>
+                 <p id="login-error" class="text-danger text-center mt-4 text-sm"></p>
+            </form>
+        </div>
     </div>
 
-    <div class="container" id="main-content" style="display:none;"> <h1>نظام المخزن والفواتير (نقطة بيع)</h1>
+    <!-- Main Application Screen (Initially Hidden) -->
+    <div id="app-screen" class="hidden">
+        <header class="bg-panel p-4 shadow-md flex justify-between items-center sticky top-0 z-50">
+            <div>
+                <h1 class="text-2xl font-bold text-primary">لوحة تحكم سايبر كيان</h1>
+                <p class="text-sm text-gray-400">المستخدم الحالي: <span id="current-user" class="font-bold"></span></p>
+            </div>
+            <div class="flex items-center gap-4 md:gap-6 text-sm md:text-base">
+                <div class="text-center">
+                    <span class="text-gray-400 block">الإيرادات</span>
+                    <span id="revenue-label" class="font-bold text-accent">0.00 EGP</span>
+                </div>
+                 <div class="text-center">
+                    <span class="text-gray-400 block">المصروفات</span>
+                    <span id="expenses-label" class="font-bold text-danger">0.00 EGP</span>
+                </div>
+                 <div class="text-center">
+                    <span class="text-gray-400 block">الصافي</span>
+                    <span id="net-label" class="font-bold text-white">0.00 EGP</span>
+                </div>
+                <button id="admin-panel-btn" class="hidden bg-warn text-black px-4 py-2 rounded-lg font-bold hover:bg-yellow-500">لوحة التحكم</button>
+                <button id="logout-btn" class="bg-danger text-white px-4 py-2 rounded-lg font-bold hover:bg-red-700 transition-colors">تسجيل الخروج</button>
+            </div>
+        </header>
 
-        <h2>الأصناف في المخزن</h2>
-        <table id="inventoryTable">
-            <thead><tr><th>اسم الصنف</th><th>الكمية المتاحة</th><th>السعر</th><th>إجراءات</th></tr></thead>
-            <tbody></tbody>
-        </table>
-        <hr>
-        <h2>إضافة صنف جديد</h2>
-        <form id="addItemForm">
-            <input type="text" id="itemName" placeholder="اسم الصنف" required><input type="number" id="itemQuantity" placeholder="الكمية" required><input type="number" id="itemPrice" placeholder="السعر" required>
-            <button type="submit" class="add-btn">إضافة الصنف</button>
-        </form>
-
-        <div class="invoice-section">
-            <h2>الفاتورة الحالية</h2>
-            <table id="invoiceTable">
-                <thead><tr><th>اسم الصنف</th><th>الكمية</th><th>سعر الوحدة</th><th>الإجمالي</th></tr></thead>
-                <tbody></tbody>
-            </table>
-            <h3>الإجمالي النهائي: <span id="invoiceTotal" class="total-price">0</span> جنيه</h3>
-            <button id="saveInvoiceBtn" onclick="saveInvoice()">حفظ وختم الفاتورة</button>
+        <main class="p-4 md:p-6">
+            <div id="devices-container" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+                <!-- Device cards will be dynamically inserted here -->
+            </div>
+        </main>
+    </div>
+    
+    <!-- Modals Container -->
+    <div id="start-session-modal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 hidden">
+        <div class="bg-panel rounded-lg shadow-lg p-6 w-full max-w-md">
+            <h3 class="text-xl font-bold mb-4 text-primary">بدء جلسة جديدة لـ <span id="modal-device-name"></span></h3>
+            <form id="start-session-form">
+                <div class="mb-4"><label class="block mb-2">نوع الجلسة</label><div id="session-type-options" class="flex gap-4"></div></div>
+                <div class="mb-4"><label class="block mb-2">مدة الجلسة</label><div class="flex gap-2 flex-wrap" id="time-options"></div></div>
+                <div id="manual-time-input-container" class="mb-4 hidden"><label for="manual-minutes">أدخل الدقائق يدويًا</label><input type="number" id="manual-minutes" class="bg-gray-700 w-full p-2 rounded" min="1"></div>
+                <div class="mb-4"><label for="customer-name">اسم العميل (اختياري)</label><input type="text" id="customer-name" class="bg-gray-700 w-full p-2 rounded"></div>
+                <div class="flex justify-end gap-4 mt-6"><button type="button" id="cancel-start-session" class="btn-secondary px-4 py-2 rounded-lg">إلغاء</button><button type="submit" class="btn-primary px-4 py-2 rounded-lg font-bold">بدء الجلسة</button></div>
+            </form>
         </div>
-
-        <div class="archive-section">
-            <h2>أرشيف الفواتير المحفوظة</h2>
-            <table id="archiveTable">
-                <thead><tr><th>رقم الفاتورة</th><th>التاريخ</th><th>اسم العميل</th><th>الإجمالي</th><th>إجراءات</th></tr></thead>
-                <tbody></tbody>
-            </table>
+    </div>
+    
+    <div id="add-item-modal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 hidden">
+        <div class="bg-panel rounded-lg shadow-lg p-6 w-full max-w-sm">
+            <h3 class="text-xl font-bold mb-4 text-primary">إضافة مشروب/منتج</h3>
+            <div id="item-list" class="space-y-2 max-h-60 overflow-y-auto"></div>
+            <div class="flex justify-end mt-6"><button type="button" id="cancel-add-item" class="btn-secondary px-4 py-2 rounded-lg">إغلاق</button></div>
         </div>
+    </div>
 
-        <div class="footer">
-            &copy; 2023 كل الحقوق محفوظة لموقع أخويا <span>نوس</span>
+    <div id="end-session-modal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 hidden">
+        <div class="bg-panel rounded-lg shadow-lg p-6 w-full max-w-sm text-center">
+            <h3 class="text-xl font-bold mb-2 text-warn">تأكيد الإنهاء</h3>
+            <p class="mb-6">هل أنت متأكد أنك تريد إنهاء الجلسة لجهاز <span id="end-modal-device-name" class="font-bold"></span>؟</p>
+            <div class="flex justify-center gap-4">
+                <button id="cancel-end-session" class="btn-secondary px-6 py-2 rounded-lg">إلغاء</button>
+                <button id="confirm-end-session" class="btn-danger px-6 py-2 rounded-lg font-bold">نعم، قم بالإنهاء</button>
+            </div>
+        </div>
+    </div>
+    
+    <div id="notification-modal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 hidden">
+        <div class="bg-panel rounded-lg shadow-lg p-6 w-full max-w-sm text-center">
+            <p id="notification-message" class="mb-6 text-lg"></p>
+            <button id="notification-ok-btn" class="btn-primary px-8 py-2 rounded-lg font-bold">حسنًا</button>
+        </div>
+    </div>
+
+    <!-- Admin Panel Modal -->
+    <div id="admin-modal" class="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-[60] hidden">
+        <div class="bg-panel rounded-lg shadow-lg p-6 w-full max-w-4xl h-5/6 flex flex-col">
+            <div class="flex justify-between items-center mb-4 border-b border-gray-700 pb-3">
+                <h3 class="text-2xl font-bold text-primary">لوحة تحكم المدير</h3>
+                <button id="close-admin-modal" class="text-gray-400 hover:text-white text-3xl">&times;</button>
+            </div>
+            <!-- Tabs -->
+            <div class="flex border-b border-gray-600 mb-4">
+                <button class="admin-tab-btn flex-1 py-2 text-center border-b-2 border-primary" data-tab="user-management">إدارة المستخدمين</button>
+                <button class="admin-tab-btn flex-1 py-2 text-center border-b-2 border-transparent text-gray-400" data-tab="activity-log">سجل النشاط</button>
+            </div>
+            <!-- Tab Content -->
+            <div class="flex-grow overflow-y-auto">
+                 <!-- User Management Tab -->
+                 <div id="user-management-tab" class="admin-tab-content">
+                    <h4 class="text-xl font-bold mb-4">إدارة المستخدمين</h4>
+                    <div id="user-list-container" class="space-y-4"></div>
+                </div>
+                <!-- Activity Log Tab -->
+                <div id="activity-log-tab" class="admin-tab-content hidden">
+                    <div class="flex justify-between items-center mb-4">
+                         <h4 id="activity-log-title" class="text-xl font-bold">سجل النشاط (آخر 100 حركة)</h4>
+                         <button id="show-all-activity-btn" class="btn-secondary px-4 py-1 rounded hidden">عرض الكل</button>
+                    </div>
+                    <div id="activity-log-container" class="space-y-2 font-mono text-sm pr-2"></div>
+                </div>
+            </div>
         </div>
     </div>
 
     <script>
-        // --- أول حاجة خالص، بنشغل شاشة التحميل ---
-        window.addEventListener('load', () => {
-            const loadingScreen = document.getElementById('loading-screen');
-            const mainContent = document.getElementById('main-content');
-
-            setTimeout(() => {
-                loadingScreen.style.display = 'none'; // بنخفي شاشة التحميل
-                mainContent.style.display = 'block'; // بنظهر المحتوى الرئيسي
-            }, 6000); // 6 ثواني بالظبط زي ما طلبت يا كبير
-        });
-
-        let currentInvoice = [];
-
         document.addEventListener('DOMContentLoaded', () => {
-            renderInventoryTable();
-            renderArchiveTable();
-        });
+            const adminEmail = "admin@kayan.com";
 
-        // --- وظايف المخزن ---
-        function getInventory() { return JSON.parse(localStorage.getItem('inventory')) || []; }
-        function saveInventory(inventory) { localStorage.setItem('inventory', JSON.stringify(inventory)); }
-        function renderInventoryTable() {
-            const inventory = getInventory();
-            const invTableBody = document.querySelector('#inventoryTable tbody');
-            invTableBody.innerHTML = '';
-            inventory.forEach((item, index) => {
-                const row = invTableBody.insertRow();
-                row.innerHTML = `<td>${item.name}</td><td>${item.quantity}</td><td>${item.price} جنيه</td>
-                <td>
-                    <button class="refill-btn" onclick="refillItem(${index})">تزويد</button>
-                    <button class="add-to-invoice-btn" onclick="addToInvoice(${index})">إضافة للفاتورة</button>
-                    <button class="delete-btn" onclick="deleteItem(${index})">مسح</button>
-                </td>`;
-            });
-        }
-        document.getElementById('addItemForm').addEventListener('submit', function(event) {
-            event.preventDefault();
-            const name = document.getElementById('itemName').value;
-            const quantity = parseInt(document.getElementById('itemQuantity').value);
-            const price = parseFloat(document.getElementById('itemPrice').value);
-            if (!name || !quantity || !price) { alert('كله لازم يتملي يا وحش!'); return; }
-            const inventory = getInventory();
-            inventory.push({ name, quantity, price });
-            saveInventory(inventory);
-            renderInventoryTable();
-            this.reset();
-        });
-        function deleteItem(index) {
-            if (confirm('متأكد هتمسح الصنف ده خالص؟')) {
-                let inventory = getInventory();
-                inventory.splice(index, 1);
-                saveInventory(inventory);
-                renderInventoryTable();
-            }
-        }
-        
-        // --- وظيفة التزويد ---
-        function refillItem(index) {
-            const refillQuantity = parseInt(prompt("هتزود كام قطعة على الصنف ده؟"));
-            if (!refillQuantity || refillQuantity <= 0) {
-                alert("لازم تدخل كمية صح.");
-                return;
-            }
-            let inventory = getInventory();
-            inventory[index].quantity += refillQuantity;
-            saveInventory(inventory);
-            renderInventoryTable();
-            alert("تمام، تم تزويد المخزن.");
-        }
+            const kayanDevicesSetup = [
+                { name: "PS7", type: "PlayStation_Premium" }, { name: "PS8", type: "PlayStation_Premium" },
+                { name: "PS9", type: "PlayStation_Premium" }, { name: "PS10", type: "PlayStation_Premium" },
+            ];
+            const deviceRates = { "PlayStation_Premium": { "Single": 40.0, "Multiplayer": 60.0 } };
+            const itemPrices = {"اندومي": 20, "شاي": 10, "قهوه": 20, "بيبسي": 20, "ينسون": 15, "نعناع": 15, "ناسكافيه": 15};
 
-        // --- وظايف الفاتورة الحالية ---
-        function addToInvoice(itemIndex) {
-            let inventory = getInventory();
-            const item = inventory[itemIndex];
-            if (item.quantity <= 0) { alert("الصنف ده خلصان يا كبير!"); return; }
-            const quantityToAdd = parseInt(prompt(`عايز كام قطعة من "${item.name}"؟\nالمتاح: ${item.quantity}`));
-            if (!quantityToAdd || quantityToAdd <= 0 || quantityToAdd > item.quantity) {
-                alert("كمية غلط يا معلم."); return;
-            }
-            inventory[itemIndex].quantity -= quantityToAdd;
-            saveInventory(inventory);
-            const existingItem = currentInvoice.find(invItem => invItem.name === item.name);
-            if (existingItem) {
-                existingItem.quantity += quantityToAdd;
-                existingItem.total = existingItem.quantity * existingItem.price;
-            } else {
-                currentInvoice.push({ name: item.name, quantity: quantityToAdd, price: item.price, total: quantityToAdd * item.price });
-            }
-            renderInventoryTable();
-            renderInvoiceTable();
-        }
-        function renderInvoiceTable() {
-            const invcTableBody = document.querySelector('#invoiceTable tbody');
-            invcTableBody.innerHTML = '';
-            let total = 0;
-            currentInvoice.forEach(item => {
-                const row = invcTableBody.insertRow();
-                row.innerHTML = `<td>${item.name}</td><td>${item.quantity}</td><td>${item.price} جنيه</td><td>${item.total.toFixed(2)} جنيه</td>`;
-                total += item.total;
-            });
-            document.getElementById('invoiceTotal').textContent = total.toFixed(2);
-        }
-
-        // --- وظايف الأرشيف ---
-        function getArchivedInvoices() { return JSON.parse(localStorage.getItem('invoices')) || []; }
-        function saveArchivedInvoices(invoices) { localStorage.setItem('invoices', JSON.stringify(invoices)); }
-        
-        function saveInvoice() {
-            if (currentInvoice.length === 0) { alert("الفاتورة فاضية يا كبير!"); return; }
-            const customerName = prompt("الفاتورة دي باسم مين؟ (دوس OK لو من غير اسم)") || "زبون كاش";
-            const totalAmount = currentInvoice.reduce((sum, item) => sum + item.total, 0);
-            const newInvoice = {
-                id: Date.now(),
-                date: new Date().toLocaleString('ar-EG'),
-                customer: customerName,
-                items: currentInvoice,
-                total: totalAmount
-            };
-            const allInvoices = getArchivedInvoices();
-            allInvoices.push(newInvoice);
-            saveArchivedInvoices(allInvoices);
-            alert(`تمام يا ريس، الفاتورة اتحفظت برقم ${newInvoice.id}`);
-            currentInvoice = [];
-            renderInvoiceTable();
-            renderArchiveTable();
-        }
-        
-        function renderArchiveTable() {
-            const archiveTableBody = document.querySelector('#archiveTable tbody');
-            archiveTableBody.innerHTML = '';
-            const allInvoices = getArchivedInvoices();
-            allInvoices.slice().reverse().forEach(invoice => {
-                const row = archiveTableBody.insertRow();
-                row.innerHTML = `
-                    <td>${invoice.id}</td>
-                    <td>${invoice.date}</td>
-                    <td>${invoice.customer}</td>
-                    <td>${invoice.total.toFixed(2)} جنيه</td>
-                    <td>
-                        <button class="print-btn" onclick="viewInvoice(${invoice.id})">عرض وطباعة</button>
-                    </td>`;
-            });
-        }
-        
-        // --- وظيفة الطباعة ---
-        function viewInvoice(invoiceId) {
-            const allInvoices = getArchivedInvoices();
-            const invoice = allInvoices.find(inv => inv.id === invoiceId);
-            if (!invoice) { alert("الفاتورة دي مش موجودة!"); return; }
-
-            let invoiceHTML = `
-                <html><head><title>فاتورة رقم ${invoice.id}</title>
-                <style>
-                    body { font-family: 'Segoe UI', Tahoma, sans-serif; direction: rtl; }
-                    .invoice-box { max-width: 800px; margin: auto; padding: 30px; border: 1px solid #eee; box-shadow: 0 0 10px rgba(0, 0, 0, 0.15); font-size: 16px; line-height: 24px; }
-                    .invoice-box table { width: 100%; line-height: inherit; text-align: right; }
-                    .invoice-box table td { padding: 5px; vertical-align: top; }
-                    .invoice-box table tr.heading td { background: #eee; border-bottom: 1px solid #ddd; font-weight: bold; }
-                    .invoice-box table tr.item td { border-bottom: 1px solid #eee; }
-                    .invoice-box table tr.total td:last-child { border-top: 2px solid #eee; font-weight: bold; }
-                    .footer-print { text-align: center; margin-top: 30px; font-size: 12px; color: #666; }
-                    .footer-print span { color: #0056b3; font-weight: bold; }
-                </style></head><body>
-                <div class="invoice-box">
-                    <h2>فاتورة ضريبية مبسطة</h2>
-                    <p>
-                        <b>رقم الفاتورة:</b> ${invoice.id}<br>
-                        <b>تاريخ الإصدار:</b> ${invoice.date}<br>
-                        <b>اسم العميل:</b> ${invoice.customer}
-                    </p>
-                    <table>
-                        <tr class="heading"><td>الصنف</td><td>الكمية</td><td>سعر الوحدة</td><td>الإجمالي</td></tr>`;
+            // --- DOM ELEMENTS ---
+            const loginScreen = document.getElementById('login-screen');
+            const appScreen = document.getElementById('app-screen');
+            const loginForm = document.getElementById('login-form');
+            const loginError = document.getElementById('login-error');
+            const currentUserSpan = document.getElementById('current-user');
+            const logoutBtn = document.getElementById('logout-btn');
+            const adminPanelBtn = document.getElementById('admin-panel-btn');
+            const devicesContainer = document.getElementById('devices-container');
+            const revenueLabel = document.getElementById('revenue-label');
+            const expensesLabel = document.getElementById('expenses-label');
+            const netLabel = document.getElementById('net-label');
             
-            invoice.items.forEach(item => {
-                invoiceHTML += `<tr class="item">
-                    <td>${item.name}</td>
-                    <td>${item.quantity}</td>
-                    <td>${item.price.toFixed(2)} جنيه</td>
-                    <td>${item.total.toFixed(2)} جنيه</td>
-                </tr>`;
+            const startSessionModal = document.getElementById('start-session-modal');
+            const addItemModal = document.getElementById('add-item-modal');
+            const endSessionModal = document.getElementById('end-session-modal');
+            const notificationModal = document.getElementById('notification-modal');
+            const adminModal = document.getElementById('admin-modal');
+            const notificationMessage = document.getElementById('notification-message');
+            const notificationOkBtn = document.getElementById('notification-ok-btn');
+
+            let currentDeviceToStart = null, currentDeviceToAddItem = null, currentDeviceToEnd = null;
+            let appState = {};
+            let activityLogFilter = null; // To filter activity by user
+
+            // --- STATE MANAGEMENT ---
+            function saveState() {
+                localStorage.setItem('kayanCyberState', JSON.stringify(appState));
+            }
+
+            function loadState() {
+                const savedState = localStorage.getItem('kayanCyberState');
+                if (savedState) {
+                    appState = JSON.parse(savedState);
+                } else {
+                    appState = {
+                        sessions: {},
+                        financials: { revenue: 0, expenses: 0 },
+                        users: {
+                            "admin@kayan.com": { password: "admin123", name: "المدير" },
+                            "test@kayan.com": { password: "123456", name: "موظف مؤقت" }
+                        },
+                        activityLog: []
+                    };
+                }
+                if (!appState.users) {
+                     appState.users = { "admin@kayan.com": { password: "admin123", name: "المدير" }, "test@kayan.com": { password: "123456", name: "موظف مؤقت" } };
+                }
+                if (!appState.activityLog) appState.activityLog = [];
+
+                renderAll();
+            }
+
+            // --- ACTIVITY LOG ---
+            function logActivity(action, details = {}) {
+                const userEmail = localStorage.getItem('kayanLoggedInUser') || 'System';
+                appState.activityLog.unshift({
+                    timestamp: new Date().toISOString(),
+                    user: userEmail,
+                    action: action,
+                    details: details
+                });
+                if (appState.activityLog.length > 100) appState.activityLog.pop();
+                saveState();
+            }
+
+            // --- AUTHENTICATION ---
+            function checkLogin() {
+                const loggedInUser = localStorage.getItem('kayanLoggedInUser');
+                if (loggedInUser && appState.users[loggedInUser]) {
+                    showAppUI(appState.users[loggedInUser].name);
+                    loadState();
+                } else {
+                    showLoginUI();
+                }
+            }
+
+            loginForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const email = document.getElementById('email').value;
+                const password = document.getElementById('password').value;
+                loginError.textContent = '';
+                const user = appState.users[email];
+                if (user && user.password === password) {
+                    localStorage.setItem('kayanLoggedInUser', email);
+                    logActivity('تسجيل الدخول');
+                    checkLogin();
+                } else {
+                    loginError.textContent = 'كلمة المرور أو الإيميل غير صحيح.';
+                }
             });
 
-            invoiceHTML += `
-                        <tr class="total"><td></td><td></td><td><b>الإجمالي النهائي:</b></td><td><b>${invoice.total.toFixed(2)} جنيه</b></td></tr>
-                    </table>
-                    <div class="footer-print">
-                        &copy; 2023 كل الحقوق محفوظة لموقع أخويا <span>نوس</span>
-                    </div>
-                </div>
-            </body></html>`;
+            logoutBtn.addEventListener('click', () => {
+                logActivity('تسجيل الخروج');
+                localStorage.removeItem('kayanLoggedInUser');
+                if (window.timerInterval) clearInterval(window.timerInterval);
+                checkLogin();
+            });
+
+            function showAppUI(userName) {
+                loginScreen.classList.add('hidden');
+                appScreen.classList.remove('hidden');
+                currentUserSpan.textContent = userName;
+                adminPanelBtn.classList.toggle('hidden', localStorage.getItem('kayanLoggedInUser') !== adminEmail);
+                if (window.timerInterval) clearInterval(window.timerInterval);
+                window.timerInterval = setInterval(updateTimersAndCosts, 1000);
+            }
+
+            function showLoginUI() {
+                loginScreen.classList.remove('hidden');
+                appScreen.classList.add('hidden');
+            }
             
-            const printWindow = window.open('', '', 'height=600,width=800');
-            printWindow.document.write(invoiceHTML);
-            printWindow.document.close();
-            printWindow.focus();
-            setTimeout(() => { printWindow.print(); }, 500);
-        }
+            function renderAll() {
+                renderDevices();
+                updateFinancialDisplay();
+            }
+
+            function renderDevices() {
+                devicesContainer.innerHTML = ''; 
+                kayanDevicesSetup.forEach(device => {
+                    const session = appState.sessions[device.name];
+                    const isActive = !!session;
+                    let cardBorderClass = isActive ? (session.endTime && new Date() > new Date(session.endTime) ? 'border-danger' : 'border-accent') : 'border-transparent';
+                    const card = document.createElement('div');
+                    card.className = `bg-panel p-4 rounded-lg shadow-md border-2 transition-all ${cardBorderClass}`;
+                    if (isActive && !card.dataset.animated) {
+                        card.classList.add('animate-pulse-once');
+                        card.dataset.animated = 'true';
+                    }
+                    card.innerHTML = `
+                        <div class="flex justify-between items-center mb-2"><h2 class="text-xl font-bold">${device.name}</h2><span class="text-xs font-bold px-2 py-1 rounded ${isActive ? 'bg-accent text-black' : 'bg-gray-600 text-gray-300'}">${isActive ? 'مشغول' : 'متاح'}</span></div>
+                        <div class="text-center my-4"><p class="text-4xl font-mono timer-display">${isActive ? '00:00:00' : '--:--:--'}</p><p class="text-xs text-gray-400 customer-display h-4">${isActive ? ('<i class="fa-solid fa-user"></i> ' + session.customer) : ' '}</p></div>
+                        <div class="text-center mb-4"><p class="text-lg font-bold text-warn cost-display">0.00 EGP</p></div>
+                        <div class="grid grid-cols-3 gap-2">
+                            <button class="start-btn col-span-3 btn-primary py-2 rounded-lg font-bold" data-device-name="${device.name}" data-device-type="${device.type}" ${isActive ? 'disabled' : ''}><i class="fa-solid fa-play"></i> بدء</button>
+                            <button class="end-btn btn-danger py-2 rounded-lg font-bold" data-device-name="${device.name}" ${!isActive ? 'disabled' : ''}><i class="fa-solid fa-stop"></i> إنهاء</button>
+                            <button class="item-btn col-span-2 btn-secondary py-2 rounded-lg" data-device-name="${device.name}" ${!isActive ? 'disabled' : ''}><i class="fa-solid fa-mug-saucer"></i> إضافة مشروب</button>
+                        </div>`;
+                    devicesContainer.appendChild(card);
+                });
+            }
+            
+            function updateFinancialDisplay() {
+                const { revenue = 0, expenses = 0 } = appState.financials;
+                revenueLabel.textContent = `${revenue.toFixed(2)} EGP`;
+                expensesLabel.textContent = `${expenses.toFixed(2)} EGP`;
+                netLabel.textContent = `${(revenue - expenses).toFixed(2)} EGP`;
+            }
+
+            function updateTimersAndCosts() {
+                document.querySelectorAll('.start-btn').forEach(btn => {
+                    const deviceName = btn.dataset.deviceName;
+                    const card = btn.closest('.bg-panel');
+                    if (!card) return;
+                    const timerEl = card.querySelector('.timer-display');
+                    const costEl = card.querySelector('.cost-display');
+                    const session = appState.sessions[deviceName];
+                    if (!session) return;
+                    const now = new Date(), startTime = new Date(session.startTime);
+                    if (session.endTime) {
+                        const endTime = new Date(session.endTime);
+                        const remaining = endTime - now;
+                        if (remaining > 0) {
+                            const h = Math.floor(remaining / 3600000), m = Math.floor((remaining % 3600000) / 60000), s = Math.floor((remaining % 60000) / 1000);
+                            timerEl.textContent = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+                        } else { timerEl.textContent = '00:00:00'; }
+                    } else {
+                        const elapsed = now - startTime;
+                        if (elapsed < 0) return;
+                        const h = Math.floor(elapsed / 3600000), m = Math.floor((elapsed % 3600000) / 60000), s = Math.floor((elapsed % 60000) / 1000);
+                        timerEl.textContent = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+                    }
+                    const timeCost = ((now - startTime) / 3600000) * (deviceRates[session.deviceType]?.[session.sessionType] || 0);
+                    costEl.textContent = `${(timeCost + session.itemCost).toFixed(2)} EGP`;
+                });
+            }
+
+            function startSession(deviceName, deviceType, sessionType, minutes, customerName) {
+                const startTime = new Date();
+                const endTime = minutes > 0 ? new Date(startTime.getTime() + minutes * 60000) : null;
+                appState.sessions[deviceName] = { deviceType, sessionType, customer: customerName || "عميل كاش", startTime: startTime.toISOString(), endTime: endTime ? endTime.toISOString() : null, itemCost: 0, items: [] };
+                logActivity('بدء جلسة', { deviceName, customerName, sessionType, minutes: minutes > 0 ? minutes : 'مفتوح' });
+                saveState(); renderAll(); hideStartSessionModal();
+            }
+            
+            function endSession(deviceName) {
+                const session = appState.sessions[deviceName];
+                if (!session) { showNotification("خطأ: الجلسة غير موجودة."); return; }
+                const timeCost = ((new Date() - new Date(session.startTime)) / 3600000) * (deviceRates[session.deviceType]?.[session.sessionType] || 0);
+                const totalCost = Math.ceil(timeCost + session.itemCost);
+                appState.financials.revenue += totalCost;
+                delete appState.sessions[deviceName];
+                logActivity('إنهاء جلسة', { deviceName, totalCost: `${totalCost.toFixed(2)} EGP` });
+                saveState(); renderAll();
+                showNotification(`تم إنهاء الجلسة لجهاز ${deviceName}<br>الإجمالي المطلوب: ${totalCost.toFixed(2)} جنيه`);
+            }
+            
+            function addItemToSession(deviceName, itemName, itemPrice) {
+                const session = appState.sessions[deviceName];
+                if (session) {
+                    session.itemCost += itemPrice;
+                    session.items.push(itemName);
+                    logActivity('إضافة منتج', { deviceName, itemName, itemPrice: `${itemPrice.toFixed(2)} EGP` });
+                    saveState(); renderAll(); hideAddItemModal();
+                } else { showNotification("حدث خطأ أثناء إضافة المنتج."); }
+            }
+
+            function showNotification(message) {
+                notificationMessage.innerHTML = message;
+                notificationModal.classList.remove('hidden');
+            }
+            notificationOkBtn.addEventListener('click', () => notificationModal.classList.add('hidden'));
+
+            devicesContainer.addEventListener('click', (e) => {
+                const btn = e.target.closest('button');
+                if (!btn || btn.disabled) return;
+                const deviceName = btn.dataset.deviceName;
+                if (btn.classList.contains('start-btn')) showStartSessionModal(deviceName, btn.dataset.deviceType);
+                if (btn.classList.contains('end-btn')) showEndSessionConfirmation(deviceName);
+                if (btn.classList.contains('item-btn')) showAddItemModal(deviceName);
+            });
+
+            function showStartSessionModal(deviceName, deviceType) {
+                currentDeviceToStart = { name: deviceName, type: deviceType };
+                document.getElementById('modal-device-name').textContent = deviceName;
+                document.getElementById('session-type-options').innerHTML = Object.keys(deviceRates[deviceType]).map((type, i) => `<div><input type="radio" name="sessionType" value="${type}" id="type-${type}" ${i === 0 ? 'checked' : ''}><label for="type-${type}" class="ms-2 text-lg">${type === 'Single' ? 'فردي' : 'زوجي'}</label></div>`).join('');
+                document.getElementById('time-options').innerHTML = `<button type="button" class="time-option-btn flex-1 btn-primary p-2 rounded" data-minutes="0">مفتوح</button><button type="button" class="time-option-btn flex-1 btn-secondary p-2 rounded" data-minutes="30">30 د</button><button type="button" class="time-option-btn flex-1 btn-secondary p-2 rounded" data-minutes="60">60 د</button><button type="button" class="time-option-btn flex-1 btn-secondary p-2 rounded" data-minutes="manual">مخصص</button>`;
+                startSessionModal.classList.remove('hidden');
+                document.getElementById('manual-time-input-container').classList.add('hidden');
+            }
+            function hideStartSessionModal() { document.getElementById('start-session-form').reset(); startSessionModal.classList.add('hidden'); }
+            
+            function showAddItemModal(deviceName) {
+                currentDeviceToAddItem = deviceName;
+                document.getElementById('item-list').innerHTML = Object.entries(itemPrices).map(([name, price]) => `<button class="item-select-btn w-full text-right p-3 rounded bg-gray-700 hover:bg-primary hover:text-black" data-name="${name}" data-price="${price}">${name} - ${price.toFixed(2)} EGP</button>`).join('');
+                addItemModal.classList.remove('hidden');
+            }
+            addItemModal.addEventListener('click', e => { if (e.target.classList.contains('item-select-btn')) { addItemToSession(currentDeviceToAddItem, e.target.dataset.name, parseFloat(e.target.dataset.price)); } });
+            function hideAddItemModal() { addItemModal.classList.add('hidden'); }
+
+            function showEndSessionConfirmation(deviceName) {
+                currentDeviceToEnd = deviceName;
+                document.getElementById('end-modal-device-name').textContent = deviceName;
+                endSessionModal.classList.remove('hidden');
+            }
+            function hideEndSessionConfirmation() { endSessionModal.classList.add('hidden'); }
+            
+            document.getElementById('cancel-start-session').addEventListener('click', hideStartSessionModal);
+            document.getElementById('cancel-add-item').addEventListener('click', hideAddItemModal);
+            document.getElementById('cancel-end-session').addEventListener('click', hideEndSessionConfirmation);
+            document.getElementById('confirm-end-session').addEventListener('click', () => { if (currentDeviceToEnd) endSession(currentDeviceToEnd); hideEndSessionConfirmation(); });
+            
+            startSessionModal.addEventListener('click', (e) => {
+                if (e.target.classList.contains('time-option-btn')) {
+                    document.querySelectorAll('.time-option-btn').forEach(btn => btn.classList.replace('btn-primary', 'btn-secondary'));
+                    e.target.classList.replace('btn-secondary', 'btn-primary');
+                    document.getElementById('manual-time-input-container').classList.toggle('hidden', e.target.dataset.minutes !== 'manual');
+                }
+            });
+
+            document.getElementById('start-session-form').addEventListener('submit', (e) => {
+                e.preventDefault();
+                const sessionType = document.querySelector('input[name="sessionType"]:checked').value;
+                const customerName = document.getElementById('customer-name').value;
+                const selectedTimeBtn = document.querySelector('.time-option-btn.btn-primary');
+                const minutes = selectedTimeBtn ? (selectedTimeBtn.dataset.minutes === 'manual' ? parseInt(document.getElementById('manual-minutes').value) || 0 : parseInt(selectedTimeBtn.dataset.minutes)) : 0;
+                startSession(currentDeviceToStart.name, currentDeviceToStart.type, sessionType, minutes, customerName);
+            });
+
+            // --- ADMIN PANEL ---
+            adminPanelBtn.addEventListener('click', () => {
+                activityLogFilter = null; // Reset filter when opening
+                renderAdminPanel();
+                adminModal.classList.remove('hidden');
+            });
+            document.getElementById('close-admin-modal').addEventListener('click', () => adminModal.classList.add('hidden'));
+
+            function renderAdminPanel() {
+                renderUserManagementTab();
+                renderActivityLogTab();
+                // Set default tab view
+                switchTab('user-management');
+            }
+            
+            function switchTab(tabId) {
+                document.querySelectorAll('.admin-tab-btn').forEach(btn => {
+                    const isSelected = btn.dataset.tab === tabId;
+                    btn.classList.toggle('border-primary', isSelected);
+                    btn.classList.toggle('text-gray-400', !isSelected);
+                    btn.classList.toggle('border-transparent', !isSelected);
+                });
+                document.querySelectorAll('.admin-tab-content').forEach(content => {
+                    content.classList.toggle('hidden', content.id !== `${tabId}-tab`);
+                });
+            }
+
+            function renderUserManagementTab() {
+                const container = document.getElementById('user-list-container');
+                container.innerHTML = '';
+                Object.entries(appState.users).forEach(([email, userData]) => {
+                    const userDiv = document.createElement('div');
+                    userDiv.className = 'bg-gray-800 p-4 rounded-lg flex justify-between items-center';
+                    userDiv.innerHTML = `
+                        <div>
+                            <p class="font-bold">${userData.name}</p>
+                            <p class="text-sm text-gray-400">${email}</p>
+                        </div>
+                        <div class="flex gap-2 items-center">
+                             <button class="monitor-activity-btn btn-primary px-3 py-1 rounded" data-email="${email}">مراقبة النشاط</button>
+                            <div class="change-password-container">
+                                <button class="change-pass-btn btn-secondary px-3 py-1 rounded">تغيير كلمة المرور</button>
+                                <div class="password-fields hidden flex gap-2 items-center">
+                                    <input type="password" placeholder="كلمة المرور الجديدة" class="new-password-input bg-gray-700 p-1 rounded">
+                                    <button class="save-pass-btn btn-primary px-3 py-1 rounded">حفظ</button>
+                                    <button class="cancel-pass-btn btn-danger px-3 py-1 rounded">X</button>
+                                </div>
+                            </div>
+                        </div>`;
+                    container.appendChild(userDiv);
+                });
+            }
+
+            document.getElementById('user-list-container').addEventListener('click', (e) => {
+                const target = e.target;
+
+                // Handle Monitor Button
+                if(target.classList.contains('monitor-activity-btn')) {
+                    activityLogFilter = target.dataset.email;
+                    switchTab('activity-log');
+                    renderActivityLogTab();
+                }
+
+                // Handle Password Change
+                const container = target.closest('.change-password-container');
+                if (!container) return;
+                if (target.classList.contains('change-pass-btn')) {
+                    container.querySelector('.change-pass-btn').classList.add('hidden');
+                    container.querySelector('.password-fields').classList.remove('hidden');
+                }
+                if (target.classList.contains('cancel-pass-btn')) {
+                    container.querySelector('.change-pass-btn').classList.remove('hidden');
+                    container.querySelector('.password-fields').classList.add('hidden');
+                }
+                if (target.classList.contains('save-pass-btn')) {
+                    const email = container.closest('.bg-gray-800').querySelector('.text-sm').textContent;
+                    const newPassword = container.querySelector('.new-password-input').value;
+                    if (newPassword && newPassword.length >= 6) {
+                        appState.users[email].password = newPassword;
+                        saveState();
+                        logActivity('تغيير كلمة المرور', { forUser: email });
+                        showNotification(`تم تغيير كلمة مرور ${email} بنجاح.`);
+                        container.querySelector('.cancel-pass-btn').click();
+                    } else {
+                        showNotification('كلمة المرور يجب أن تكون 6 أحرف على الأقل.');
+                    }
+                }
+            });
+
+            function renderActivityLogTab() {
+                const container = document.getElementById('activity-log-container');
+                const title = document.getElementById('activity-log-title');
+                const showAllBtn = document.getElementById('show-all-activity-btn');
+
+                let logsToShow = appState.activityLog;
+                if (activityLogFilter) {
+                    logsToShow = appState.activityLog.filter(log => log.user === activityLogFilter);
+                    title.textContent = `سجل نشاط المستخدم: ${activityLogFilter}`;
+                    showAllBtn.classList.remove('hidden');
+                } else {
+                    title.textContent = 'سجل النشاط (آخر 100 حركة)';
+                    showAllBtn.classList.add('hidden');
+                }
+
+                container.innerHTML = logsToShow.map(log => {
+                    const logTime = new Date(log.timestamp).toLocaleString('ar-EG', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                    const details = Object.entries(log.details).map(([key, value]) => `${key}: ${value}`).join(' | ');
+                    return `
+                        <div class="bg-gray-800 p-2 rounded flex items-start">
+                            <span class="text-accent ml-3">[${logTime}]</span>
+                            <div class="flex-grow">
+                                <span class="text-warn font-bold">${log.user}</span>:
+                                <span class="text-main">${log.action}</span>
+                                ${details ? `<span class="text-gray-400 text-xs block">${details}</span>` : ''}
+                            </div>
+                        </div>`;
+                }).join('');
+                if (logsToShow.length === 0) {
+                     container.innerHTML = `<p class="text-gray-500">لا يوجد نشاط مسجل لهذا المستخدم.</p>`;
+                }
+            }
+            
+            document.getElementById('show-all-activity-btn').addEventListener('click', () => {
+                activityLogFilter = null;
+                renderActivityLogTab();
+            });
+
+            document.querySelectorAll('.admin-tab-btn').forEach(button => {
+                button.addEventListener('click', () => switchTab(button.dataset.tab));
+            });
+
+            // --- INITIALIZATION ---
+            loadState();
+            checkLogin();
+        });
     </script>
 </body>
 </html>
+
