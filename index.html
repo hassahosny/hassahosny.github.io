@@ -120,12 +120,25 @@
                     <span class="text-gray-400 block">صافي الشيفت</span>
                     <span id="net-label" class="font-bold text-white">0.00 EGP</span>
                 </div>
+                 <!-- Notification Bell -->
+                <div id="notification-container" class="relative hidden">
+                    <button id="notification-bell-btn" class="text-xl text-gray-300 hover:text-white">
+                        <i class="fa-solid fa-bell"></i>
+                        <span id="notification-badge" class="hidden absolute -top-1 -right-1 bg-danger text-white text-xs rounded-full h-4 w-4 flex items-center justify-center"></span>
+                    </button>
+                    <div id="notification-panel" class="hidden absolute top-full left-0 mt-2 w-80 bg-panel border border-gray-600 rounded-lg shadow-lg z-50">
+                        <div class="p-2 border-b border-gray-600 font-bold">الإشعارات</div>
+                        <div id="notification-list" class="max-h-96 overflow-y-auto">
+                            <!-- Notifications will be rendered here -->
+                        </div>
+                    </div>
+                </div>
                 <button id="admin-panel-btn" class="hidden bg-warn text-black px-4 py-2 rounded-lg font-bold hover:bg-yellow-500">لوحة التحكم</button>
                 <button id="logout-btn" class="bg-danger text-white px-4 py-2 rounded-lg font-bold hover:bg-red-700 transition-colors">تسجيل الخروج</button>
             </div>
         </header>
 
-        <main class="p-4 md:p-6">
+        <main class="p-4 md:p-6 relative">
             <div id="no-shift-overlay" class="hidden absolute inset-0 bg-black bg-opacity-70 flex items-center justify-center z-40">
                 <p class="text-2xl font-bold text-warn">يرجى بدء الشيفت لتفعيل الأجهزة</p>
             </div>
@@ -233,6 +246,12 @@
             const adminModal = document.getElementById('admin-modal');
             const notificationMessage = document.getElementById('notification-message');
             const notificationOkBtn = document.getElementById('notification-ok-btn');
+            const notificationContainer = document.getElementById('notification-container');
+            const notificationBellBtn = document.getElementById('notification-bell-btn');
+            const notificationBadge = document.getElementById('notification-badge');
+            const notificationPanel = document.getElementById('notification-panel');
+            const notificationList = document.getElementById('notification-list');
+
 
             let currentDeviceToStart = null, currentDeviceToAddItem = null, currentDeviceToEnd = null;
             let appState = {};
@@ -257,19 +276,30 @@
                             "admin@kayan.com": { password: "admin123", name: "المدير" },
                             "test@kayan.com": { password: "123456", name: "موظف مؤقت" }
                         },
-                        activityLog: []
+                        activityLog: [],
+                        notifications: []
                     };
                 }
-                // Ensure all keys exist for backward compatibility
+                // Backward compatibility
                 if (!appState.users) appState.users = { "admin@kayan.com": { password: "admin123", name: "المدير" }, "test@kayan.com": { password: "123456", name: "موظف مؤقت" } };
                 if (!appState.activityLog) appState.activityLog = [];
                 if (typeof appState.shiftActive === 'undefined') appState.shiftActive = false;
                 if (!appState.shiftHistory) appState.shiftHistory = [];
+                if (!appState.notifications) appState.notifications = [];
 
                 renderAll();
             }
 
-            // --- ACTIVITY LOG ---
+            // --- NOTIFICATION & LOGGING ---
+            function addNotification(message) {
+                appState.notifications.unshift({
+                    message,
+                    timestamp: new Date().toISOString(),
+                    read: false
+                });
+                if (appState.notifications.length > 50) appState.notifications.pop();
+            }
+
             function logActivity(action, details = {}) {
                 const userEmail = localStorage.getItem('kayanLoggedInUser') || 'System';
                 appState.activityLog.unshift({
@@ -277,6 +307,15 @@
                     user: userEmail, action, details
                 });
                 if (appState.activityLog.length > 100) appState.activityLog.pop();
+                
+                // Create a notification for the admin
+                if (userEmail !== adminEmail) {
+                    let notificationMsg = `<b>${userEmail}</b> قام بـ <b>${action}</b>`;
+                    if (details.deviceName) notificationMsg += ` للجهاز ${details.deviceName}`;
+                    if (details.forUser) notificationMsg += ` للمستخدم ${details.forUser}`;
+                    addNotification(notificationMsg);
+                }
+
                 saveState();
             }
 
@@ -343,10 +382,13 @@
             });
 
             function showAppUI(userName) {
+                const loggedInUser = localStorage.getItem('kayanLoggedInUser');
                 loginScreen.classList.add('hidden');
                 appScreen.classList.remove('hidden');
                 currentUserSpan.textContent = userName;
-                adminPanelBtn.classList.toggle('hidden', localStorage.getItem('kayanLoggedInUser') !== adminEmail);
+                adminPanelBtn.classList.toggle('hidden', loggedInUser !== adminEmail);
+                notificationContainer.classList.toggle('hidden', loggedInUser !== adminEmail);
+                if (loggedInUser === adminEmail) renderNotifications();
                 if (window.timerInterval) clearInterval(window.timerInterval);
                 window.timerInterval = setInterval(updateTimersAndCosts, 1000);
             }
@@ -528,7 +570,30 @@
                 startSession(currentDeviceToStart.name, currentDeviceToStart.type, sessionType, minutes, customerName);
             });
 
-            // --- ADMIN PANEL ---
+            // --- ADMIN & NOTIFICATION PANEL ---
+            function renderNotifications() {
+                const unreadCount = appState.notifications.filter(n => !n.read).length;
+                notificationBadge.textContent = unreadCount;
+                notificationBadge.classList.toggle('hidden', unreadCount === 0);
+                
+                notificationList.innerHTML = appState.notifications.map(n => {
+                    const time = new Date(n.timestamp).toLocaleTimeString('ar-EG', {hour: '2-digit', minute: '2-digit'});
+                    return `<div class="p-2 border-b border-gray-700 text-sm ${n.read ? 'text-gray-500' : 'text-main'}">
+                        <p>${n.message}</p>
+                        <p class="text-xs text-gray-400 text-left">${time}</p>
+                    </div>`
+                }).join('') || `<p class="p-4 text-center text-gray-500">لا توجد إشعارات</p>`;
+            }
+
+            notificationBellBtn.addEventListener('click', () => {
+                notificationPanel.classList.toggle('hidden');
+                if (!notificationPanel.classList.contains('hidden')) {
+                    appState.notifications.forEach(n => n.read = true);
+                    saveState();
+                    renderNotifications(); // Re-render to update style and remove badge
+                }
+            });
+            
             adminPanelBtn.addEventListener('click', () => {
                 activityLogFilter = null;
                 renderAdminPanel();
@@ -659,5 +724,4 @@
     </script>
 </body>
 </html>
-
 
