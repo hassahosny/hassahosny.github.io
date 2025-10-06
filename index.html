@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>صفحة اختبار بسيطة</title>
+    <title>اختبار بوت تليجرام</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body {
@@ -19,47 +19,100 @@
         .container {
             text-align: center;
             background-color: #1e1e1e;
-            padding: 2rem;
+            padding: 2.5rem;
             border-radius: 0.5rem;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            width: 90%;
+            max-width: 450px;
         }
         button {
-            background-color: #007bff;
+            background-color: #0088cc; /* Telegram Blue */
             color: white;
-            padding: 0.5rem 1rem;
+            padding: 0.75rem 1.5rem;
             border: none;
             border-radius: 0.25rem;
             cursor: pointer;
             transition: background-color 0.2s;
+            font-size: 1rem;
+            font-weight: bold;
         }
         button:hover {
-            background-color: #0056b3;
+            background-color: #0077b3;
         }
+        button:disabled {
+            background-color: #555;
+            cursor: not-allowed;
+        }
+        #status-message {
+            margin-top: 1.5rem;
+            min-height: 24px;
+            font-weight: bold;
+        }
+        .text-success { color: #22c55e; }
+        .text-danger { color: #ef4444; }
     </style>
 </head>
 <body>
 
     <div class="container">
-        <h1 class="text-3xl font-bold mb-4">صفحة اختبار</h1>
-        <p class="mb-6">هذا هو الكود المبسط للبدء من جديد.</p>
-        <button id="test-btn">اضغط هنا للاختبار</button>
+        <h1 class="text-3xl font-bold mb-4">اختبار بوت تليجرام</h1>
+        <p class="mb-6">اضغط على الزر لإرسال رسالة اختبار إلى بوت التليجرام الخاص بك.</p>
+        <button id="test-bot-btn">إرسال رسالة اختبار</button>
+        <p id="status-message"></p>
     </div>
 
     <script>
-        // --- JAVASCRIPT بسيط ---
-        document.getElementById('test-btn').addEventListener('click', () => {
-            // استخدام صندوق مخصص بدلاً من alert
-            const notification = document.createElement('div');
-            notification.className = 'fixed top-5 right-5 bg-green-500 text-white py-2 px-4 rounded-lg shadow-lg transition-opacity duration-300';
-            notification.textContent = 'تم الضغط على الزر بنجاح!';
-            document.body.appendChild(notification);
+        document.getElementById('test-bot-btn').addEventListener('click', async () => {
+            // --- الإعدادات ---
+            // !!! هام: استبدل هذه القيم بالتوكن والـ ID الخاصين بك
+            const TELEGRAM_BOT_TOKEN = '7579810847:AAFwgE2cpCsakNt_pHZYOD1g3Db8sUYJ86I';
+            const TELEGRAM_CHAT_ID = '6325158235';
 
-            setTimeout(() => {
-                notification.style.opacity = '0';
-                setTimeout(() => {
-                    notification.remove();
-                }, 300);
-            }, 2000);
+            const testBtn = document.getElementById('test-bot-btn');
+            const statusMessage = document.getElementById('status-message');
+
+            // --- تهيئة ---
+            testBtn.disabled = true;
+            statusMessage.textContent = 'جاري الإرسال...';
+            statusMessage.className = '';
+
+            // --- إعداد الرسالة ---
+            const timestamp = new Date().toLocaleString('ar-EG');
+            const message = `<b>🔔 رسالة اختبار من النظام 🔔</b>\n\nهذه الرسالة تم إرسالها بنجاح في:\n${timestamp}`;
+            
+            const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
+            const payload = {
+                chat_id: TELEGRAM_CHAT_ID,
+                text: message,
+                parse_mode: 'HTML' // استخدام HTML لتنسيق النص
+            };
+
+            // --- إرسال الطلب ---
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    console.log('Success:', result);
+                    statusMessage.textContent = '✅ تم إرسال الرسالة بنجاح!';
+                    statusMessage.classList.add('text-success');
+                } else {
+                    console.error('Telegram API Error:', result);
+                    statusMessage.textContent = `❌ فشل الإرسال: ${result.description}`;
+                    statusMessage.classList.add('text-danger');
+                }
+            } catch (error) {
+                console.error('Fetch Error:', error);
+                statusMessage.textContent = '❌ فشل الإرسال: خطأ في الشبكة أو الاتصال.';
+                statusMessage.classList.add('text-danger');
+            } finally {
+                testBtn.disabled = false;
+            }
         });
     </script>
 
