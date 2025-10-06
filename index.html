@@ -412,8 +412,12 @@
                           console.error("Admin creation failed:", createError);
                           loginError.textContent = "فشل إنشاء حساب المدير.";
                        }
-                    } else {
+                    } else if (error.code === 'auth/invalid-credential' || error.code === 'auth/wrong-password') {
                         loginError.textContent = 'الإيميل أو كلمة المرور غير صحيحة.';
+                    }
+                    else {
+                        console.error("Login Error:", error)
+                        loginError.textContent = 'حدث خطأ غير متوقع.';
                     }
                 }
             });
