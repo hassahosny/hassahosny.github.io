@@ -321,7 +321,7 @@
             const hide = el => el.classList.add('hidden');
             const toggle = (el, condition) => el.classList.toggle('hidden', !condition);
             const showNotification = msg => { notificationMessage.innerHTML = msg; show(notificationModal); };
-            notificationOkBtn.addEventListener('click', () => hide(notificationModal));
+            
 
             // --- NOTIFICATION & LOGGING ---
             async function logActivity(action, details = {}) {
@@ -446,7 +446,7 @@
                 cleanupListeners();
             }
 
-            // --- UI RENDERING ---
+            // --- UI RENDERING & CONTROLS ---
             function toggleShiftUI(isActive) {
                 toggle(noShiftOverlay, !isActive);
                 shiftBtn.textContent = isActive ? 'إنهاء الشيفت' : 'بدء الشيft';
@@ -557,7 +557,7 @@
                     itemCost: 0, items: []
                 });
                 logActivity('بدء جلسة', { deviceName, customerName, sessionType, minutes: minutes > 0 ? minutes : 'مفتوح' });
-                hideStartSessionModal();
+                hide(startSessionModal);
             }
             
             async function endSession(deviceName) {
@@ -591,18 +591,55 @@
                         items: arrayUnion(itemName) 
                     });
                     logActivity('إضافة منتج', { deviceName, itemName, itemPrice: `${itemPrice.toFixed(2)} جنيه` });
-                    hideAddItemModal();
+                    hide(addItemModal);
                 } catch(e) {
                      console.error("Error adding item:", e);
                      showNotification("فشل إضافة المنتج.");
                 }
             }
+            
+            devicesContainer.addEventListener('click', (e) => {
+                const btn = e.target.closest('button');
+                if (!btn || btn.disabled) return;
+                const deviceName = btn.dataset.deviceName;
+                if (btn.classList.contains('start-btn')) {
+                    document.getElementById('modal-device-name').textContent = deviceName;
+                    currentDeviceToStart = { name: deviceName, type: btn.dataset.deviceType };
+                    show(startSessionModal);
+                }
+                if (btn.classList.contains('end-btn')) {
+                     document.getElementById('end-modal-device-name').textContent = deviceName;
+                     currentDeviceToEnd = deviceName;
+                     show(endSessionModal);
+                }
+                if (btn.classList.contains('item-btn')) {
+                    currentDeviceToAddItem = deviceName;
+                    document.getElementById('item-list').innerHTML = Object.entries(itemPrices).map(([name, price]) => `<button class="item-select-btn w-full text-right p-3 rounded bg-gray-700 hover:bg-primary hover:text-black" data-name="${name}" data-price="${price}">${name} - ${price.toFixed(2)} EGP</button>`).join('');
+                    show(addItemModal);
+                }
+            });
 
-            // --- All other modal logic remains the same ---
-            // ...
+            document.getElementById('start-session-form').addEventListener('submit', (e) => {
+                e.preventDefault();
+                const sessionType = document.querySelector('input[name="sessionType"]:checked').value;
+                const customerName = document.getElementById('customer-name').value;
+                const selectedTimeBtn = document.querySelector('.time-option-btn.btn-primary');
+                const minutes = selectedTimeBtn ? (selectedTimeBtn.dataset.minutes === 'manual' ? parseInt(document.getElementById('manual-minutes').value) || 0 : parseInt(selectedTimeBtn.dataset.minutes)) : 0;
+                startSession(currentDeviceToStart.name, currentDeviceToStart.type, sessionType, minutes, customerName);
+            });
 
-            // --- GEMINI API ---
-            // ... Gemini API logic remains the same
+            document.getElementById('confirm-end-session').addEventListener('click', () => { 
+                if (currentDeviceToEnd) endSession(currentDeviceToEnd); 
+                hide(endSessionModal);
+            });
+            addItemModal.addEventListener('click', e => { 
+                if (e.target.classList.contains('item-select-btn')) {
+                    addItemToSession(currentDeviceToAddItem, e.target.dataset.name, parseFloat(e.target.dataset.price));
+                }
+            });
+            document.getElementById('cancel-start-session').addEventListener('click', () => hide(startSessionModal));
+            document.getElementById('cancel-add-item').addEventListener('click', () => hide(addItemModal));
+            document.getElementById('cancel-end-session').addEventListener('click', () => hide(endSessionModal));
 
             // --- ADMIN PANEL ---
             document.getElementById('add-user-form').addEventListener('submit', async (e) => {
@@ -617,11 +654,9 @@
 
                 try {
                     await createUserWithEmailAndPassword(tempAuth, email, password);
-                    
                     await setDoc(doc(db, `artifacts/${appId}/public/data/users`, email), {
                         name: name, email: email, role: 'employee'
                     });
-
                     showNotification(`تم إنشاء الموظف ${name} بنجاح.`);
                     logActivity("إضافة موظف", { newUser: email });
                     e.target.reset();
@@ -650,12 +685,12 @@
 
             function switchTab(tabId) {
                 document.querySelectorAll('.admin-tab-btn').forEach(btn => {
-                    const isSelected = btn.dataset.tab === tabId;
-                    toggle(btn, isSelected, 'border-primary', 'border-transparent');
-                    btn.classList.toggle('text-gray-400', !isSelected);
+                    btn.classList.toggle('border-primary', btn.dataset.tab === tabId);
+                    btn.classList.toggle('text-gray-400', btn.dataset.tab !== tabId);
+                    btn.classList.toggle('border-transparent', btn.dataset.tab !== tabId);
                 });
                 document.querySelectorAll('.admin-tab-content').forEach(content => {
-                    toggle(content, content.id === `${tabId}-tab`);
+                    content.classList.toggle('hidden', content.id !== `${tabId}-tab`);
                 });
 
                 if (tabId === 'activity-log') renderActivityLogTab();
@@ -673,9 +708,9 @@
                     </div>`
                 ).join('');
             }
+             function renderActivityLogTab() { /* ... */ }
+             function renderShiftHistoryTab() { /* ... */ }
             
-            // --- INITIALIZATION ---
-            // ...
         });
     </script>
 </body>
