@@ -357,6 +357,9 @@
                     const sessions = {};
                     snapshot.forEach(doc => sessions[doc.id] = doc.data());
                     renderDevices(sessions);
+                }, (error) => {
+                    console.error("Permission Error reading sessions:", error);
+                    showNotification("خطأ فادح: فشل الاتصال ببيانات الجلسات. تأكد من قواعد الأمان في Firebase.");
                 });
                 
                 unsubscribeShift = onSnapshot(doc(db, shiftDocPath), async (docSnap) => {
@@ -373,10 +376,16 @@
                         unsubscribeFinancials = onSnapshot(doc(db, financialsDocPath), financialDoc => {
                             const data = financialDoc.exists() ? financialDoc.data() : { revenue: 0, expenses: 0 };
                             updateFinancialDisplay(data);
+                        }, (error) => {
+                            console.error("Permission Error reading financials:", error);
+                            showNotification("خطأ فادح: فشل الاتصال بالبيانات المالية.");
                         });
                     } else {
                         updateFinancialDisplay({ revenue: 0, expenses: 0 });
                     }
+                }, (error) => {
+                    console.error("Permission Error reading shift status:", error);
+                    showNotification("خطأ فادح: فشل الاتصال بحالة الشيفت. تأكد من قواعد الأمان في Firebase.");
                 });
             }
 
@@ -648,4 +657,5 @@
     </script>
 </body>
 </html>
+
 
