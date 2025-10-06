@@ -607,6 +607,9 @@
                 const deviceName = btn.dataset.deviceName;
                 if (btn.classList.contains('start-btn')) {
                     document.getElementById('modal-device-name').textContent = deviceName;
+                    document.getElementById('session-type-options').innerHTML = Object.keys(deviceRates[btn.dataset.deviceType]).map((type, i) => `<div><input type="radio" name="sessionType" value="${type}" id="type-${type}" ${i === 0 ? 'checked' : ''}><label for="type-${type}" class="ms-2 text-lg">${type === 'Single' ? 'فردي' : 'زوجي'}</label></div>`).join('');
+                    document.getElementById('time-options').innerHTML = `<button type="button" class="time-option-btn flex-1 btn-primary p-2 rounded" data-minutes="0">مفتوح</button><button type="button" class="time-option-btn flex-1 btn-secondary p-2 rounded" data-minutes="30">30 د</button><button type="button" class="time-option-btn flex-1 btn-secondary p-2 rounded" data-minutes="60">60 د</button><button type="button" class="time-option-btn flex-1 btn-secondary p-2 rounded" data-minutes="manual">مخصص</button>`;
+
                     currentDeviceToStart = { name: deviceName, type: btn.dataset.deviceType };
                     show(startSessionModal);
                 }
@@ -701,7 +704,7 @@
                     btn.classList.toggle('border-transparent', btn.dataset.tab !== tabId);
                 });
                 document.querySelectorAll('.admin-tab-content').forEach(content => {
-                    content.classList.toggle('hidden', content.id !== `${tabId}-tab`);
+                    toggle(content, content.id === `${tabId}-tab`);
                 });
 
                 if (tabId === 'activity-log') renderActivityLogTab();
