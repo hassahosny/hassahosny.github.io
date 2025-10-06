@@ -240,7 +240,7 @@
                         </form>
                     </div>
                 </div>
-                 <div id="shift-history-tab" class="admin-tab-content hidden"><h4 class="text-xl font-bold mb-4">سجل الشيftات</h4><div id="shift-history-container" class="space-y-4"></div></div>
+                 <div id="shift-history-tab" class="admin-tab-content hidden"><h4 class="text-xl font-bold mb-4">سجل الشيفتات</h4><div id="shift-history-container" class="space-y-4"></div></div>
                  <div id="activity-log-tab" class="admin-tab-content hidden">
                     <div class="flex justify-between items-center mb-4"><h4 id="activity-log-title" class="text-xl font-bold"></h4><button id="show-all-activity-btn" class="btn-secondary px-4 py-1 rounded hidden">عرض الكل</button></div>
                     <div id="activity-log-container" class="space-y-2 font-mono text-sm pr-2"></div>
@@ -253,7 +253,8 @@
     <script type="module">
         import { initializeApp, deleteApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
         import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut, createUserWithEmailAndPassword, updatePassword } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-        import { getFirestore, doc, collection, onSnapshot, setDoc, deleteDoc, updateDoc, getDoc, serverTimestamp, increment, addDoc, query, orderBy, limit, writeBatch, getDocs, collectionGroup } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+        // FIX 1: Added 'arrayUnion' to the import list to fix the "Add Item" button functionality.
+        import { getFirestore, doc, collection, onSnapshot, setDoc, deleteDoc, updateDoc, getDoc, serverTimestamp, increment, addDoc, query, orderBy, limit, writeBatch, getDocs, collectionGroup, arrayUnion } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
         
         document.addEventListener('DOMContentLoaded', () => {
             // --- CONFIGURATION ---
@@ -261,7 +262,7 @@
                 apiKey: "AIzaSyBF7ztqF19QRrOaGOd9rni0DqY36iHd_ek",
                 authDomain: "kayan-system-75628.firebaseapp.com",
                 projectId: "kayan-system-75628",
-                storageBucket: "kayan-system-75628.firebasestorage.app",
+                storageBucket: "kayan-system-75628.appspot.com",
                 messagingSenderId: "980639622183",
                 appId: "1:980639622183:web:c02f7c973a662297ff9a02",
                 measurementId: "G-MK4YP4EQC3"
@@ -270,7 +271,7 @@
             const appId = 'kayan-cyber-cafe-web';
             const adminEmail = "admin@kayan.com";
             const TELEGRAM_BOT_TOKEN = '7579810847:AAFwgE2cpCsakNt_pHZYOD1g3Db8sUYJ86I'; 
-            const TELEGRAM_CHAT_ID = '6325158235';     
+            const TELEGRAM_CHAT_ID = '6325158235';      
 
             const kayanDevicesSetup = [ { name: "PS7", type: "PlayStation_Premium" }, { name: "PS8", type: "PlayStation_Premium" }, { name: "PS9", type: "PlayStation_Premium" }, { name: "PS10", type: "PlayStation_Premium" } ];
             const deviceRates = { "PlayStation_Premium": { "Single": 40.0, "Multiplayer": 60.0 } };
@@ -387,6 +388,7 @@
             onAuthStateChanged(auth, user => {
                 if (user) {
                     showAppUI(user);
+                    initializeAppUI();
                     initializeAppData();
                 } else {
                     showLoginUI();
@@ -449,7 +451,7 @@
             // --- UI RENDERING & CONTROLS ---
             function toggleShiftUI(isActive) {
                 toggle(noShiftOverlay, !isActive);
-                shiftBtn.textContent = isActive ? 'إنهاء الشيفت' : 'بدء الشيft';
+                shiftBtn.textContent = isActive ? 'إنهاء الشيفت' : 'بدء الشيفت';
                 shiftBtn.className = `font-bold px-4 py-2 rounded-lg ${isActive ? 'btn-danger' : 'btn-success'}`;
             }
             function renderDevices(sessions) {
@@ -599,61 +601,66 @@
             }
             
             // --- EVENT LISTENERS ---
-            notificationOkBtn.addEventListener('click', () => hide(notificationModal));
+            function initializeAppUI() {
+                notificationOkBtn.addEventListener('click', () => hide(notificationModal));
 
-            devicesContainer.addEventListener('click', (e) => {
-                const btn = e.target.closest('button');
-                if (!btn || btn.disabled) return;
-                const deviceName = btn.dataset.deviceName;
-                if (btn.classList.contains('start-btn')) {
-                    document.getElementById('modal-device-name').textContent = deviceName;
-                    document.getElementById('session-type-options').innerHTML = Object.keys(deviceRates[btn.dataset.deviceType]).map((type, i) => `<div><input type="radio" name="sessionType" value="${type}" id="type-${type}" ${i === 0 ? 'checked' : ''}><label for="type-${type}" class="ms-2 text-lg">${type === 'Single' ? 'فردي' : 'زوجي'}</label></div>`).join('');
-                    document.getElementById('time-options').innerHTML = `<button type="button" class="time-option-btn flex-1 btn-primary p-2 rounded" data-minutes="0">مفتوح</button><button type="button" class="time-option-btn flex-1 btn-secondary p-2 rounded" data-minutes="30">30 د</button><button type="button" class="time-option-btn flex-1 btn-secondary p-2 rounded" data-minutes="60">60 د</button><button type="button" class="time-option-btn flex-1 btn-secondary p-2 rounded" data-minutes="manual">مخصص</button>`;
+                devicesContainer.addEventListener('click', (e) => {
+                    const btn = e.target.closest('button');
+                    if (!btn || btn.disabled) return;
+                    const deviceName = btn.dataset.deviceName;
+                    if (btn.classList.contains('start-btn')) {
+                        document.getElementById('modal-device-name').textContent = deviceName;
+                        document.getElementById('session-type-options').innerHTML = Object.keys(deviceRates[btn.dataset.deviceType]).map((type, i) => `<div><input type="radio" name="sessionType" value="${type}" id="type-${type}" ${i === 0 ? 'checked' : ''}><label for="type-${type}" class="ms-2 text-lg">${type === 'Single' ? 'فردي' : 'زوجي'}</label></div>`).join('');
+                        document.getElementById('time-options').innerHTML = `<button type="button" class="time-option-btn flex-1 btn-primary p-2 rounded" data-minutes="0">مفتوح</button><button type="button" class="time-option-btn flex-1 btn-secondary p-2 rounded" data-minutes="30">30 د</button><button type="button" class="time-option-btn flex-1 btn-secondary p-2 rounded" data-minutes="60">60 د</button><button type="button" class="time-option-btn flex-1 btn-secondary p-2 rounded" data-minutes="manual">مخصص</button>`;
 
-                    currentDeviceToStart = { name: deviceName, type: btn.dataset.deviceType };
-                    show(startSessionModal);
-                }
-                if (btn.classList.contains('end-btn')) {
-                     document.getElementById('end-modal-device-name').textContent = deviceName;
-                     currentDeviceToEnd = deviceName;
-                     show(endSessionModal);
-                }
-                if (btn.classList.contains('item-btn')) {
-                    currentDeviceToAddItem = deviceName;
-                    document.getElementById('item-list').innerHTML = Object.entries(itemPrices).map(([name, price]) => `<button class="item-select-btn w-full text-right p-3 rounded bg-gray-700 hover:bg-primary hover:text-black" data-name="${name}" data-price="${price}">${name} - ${price.toFixed(2)} EGP</button>`).join('');
-                    show(addItemModal);
-                }
-            });
+                        currentDeviceToStart = { name: deviceName, type: btn.dataset.deviceType };
+                        show(startSessionModal);
+                    }
+                    if (btn.classList.contains('end-btn')) {
+                         document.getElementById('end-modal-device-name').textContent = deviceName;
+                         currentDeviceToEnd = deviceName;
+                         show(endSessionModal);
+                    }
+                    if (btn.classList.contains('item-btn')) {
+                        currentDeviceToAddItem = deviceName;
+                        document.getElementById('item-list').innerHTML = Object.entries(itemPrices).map(([name, price]) => `<button class="item-select-btn w-full text-right p-3 rounded bg-gray-700 hover:bg-primary hover:text-black" data-name="${name}" data-price="${price}">${name} - ${price.toFixed(2)} EGP</button>`).join('');
+                        show(addItemModal);
+                    }
+                });
 
-            startSessionModal.addEventListener('click', (e) => {
-                if (e.target.classList.contains('time-option-btn')) {
-                    document.querySelectorAll('.time-option-btn').forEach(btn => btn.classList.replace('btn-primary', 'btn-secondary'));
-                    e.target.classList.replace('btn-secondary', 'btn-primary');
-                    toggle(document.getElementById('manual-time-input-container'), e.target.dataset.minutes === 'manual');
-                }
-            });
+                startSessionModal.addEventListener('click', (e) => {
+                    if (e.target.classList.contains('time-option-btn')) {
+                        document.querySelectorAll('.time-option-btn').forEach(btn => btn.classList.replace('btn-primary', 'btn-secondary'));
+                        e.target.classList.replace('btn-secondary', 'btn-primary');
+                        toggle(document.getElementById('manual-time-input-container'), e.target.dataset.minutes === 'manual');
+                    }
+                });
 
-            document.getElementById('start-session-form').addEventListener('submit', (e) => {
-                e.preventDefault();
-                const sessionType = document.querySelector('input[name="sessionType"]:checked').value;
-                const customerName = document.getElementById('customer-name').value;
-                const selectedTimeBtn = document.querySelector('.time-option-btn.btn-primary');
-                const minutes = selectedTimeBtn ? (selectedTimeBtn.dataset.minutes === 'manual' ? parseInt(document.getElementById('manual-minutes').value) || 0 : parseInt(selectedTimeBtn.dataset.minutes)) : 0;
-                startSession(currentDeviceToStart.name, currentDeviceToStart.type, sessionType, minutes, customerName);
-            });
+                document.getElementById('start-session-form').addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    const sessionType = document.querySelector('input[name="sessionType"]:checked').value;
+                    const customerName = document.getElementById('customer-name').value;
+                    const selectedTimeBtn = document.querySelector('.time-option-btn.btn-primary');
+                    const minutes = selectedTimeBtn ? (selectedTimeBtn.dataset.minutes === 'manual' ? parseInt(document.getElementById('manual-minutes').value) || 0 : parseInt(selectedTimeBtn.dataset.minutes)) : 0;
+                    startSession(currentDeviceToStart.name, currentDeviceToStart.type, sessionType, minutes, customerName);
+                });
 
-            document.getElementById('confirm-end-session').addEventListener('click', () => { 
-                if (currentDeviceToEnd) endSession(currentDeviceToEnd); 
-                hide(endSessionModal);
-            });
-            addItemModal.addEventListener('click', e => { 
-                if (e.target.classList.contains('item-select-btn')) {
-                    addItemToSession(currentDeviceToAddItem, e.target.dataset.name, parseFloat(e.target.dataset.price));
-                }
-            });
-            document.getElementById('cancel-start-session').addEventListener('click', () => hide(startSessionModal));
-            document.getElementById('cancel-add-item').addEventListener('click', () => hide(addItemModal));
-            document.getElementById('cancel-end-session').addEventListener('click', () => hide(endSessionModal));
+                document.getElementById('confirm-end-session').addEventListener('click', () => { 
+                    if (currentDeviceToEnd) endSession(currentDeviceToEnd); 
+                    hide(endSessionModal);
+                });
+                addItemModal.addEventListener('click', e => { 
+                    if (e.target.classList.contains('item-select-btn')) {
+                        addItemToSession(currentDeviceToAddItem, e.target.dataset.name, parseFloat(e.target.dataset.price));
+                    }
+                });
+                document.getElementById('cancel-start-session').addEventListener('click', () => hide(startSessionModal));
+                document.getElementById('cancel-add-item').addEventListener('click', () => hide(addItemModal));
+                document.getElementById('cancel-end-session').addEventListener('click', () => hide(endSessionModal));
+                
+                 // FIX 2: Added event listener for the summary modal close button.
+                 document.getElementById('close-summary-modal').addEventListener('click', () => hide(summaryModal));
+            }
 
             // --- ADMIN PANEL ---
             document.getElementById('add-user-form').addEventListener('submit', async (e) => {
@@ -686,6 +693,20 @@
                 show(adminModal);
             });
             document.getElementById('close-admin-modal').addEventListener('click', () => hide(adminModal));
+
+            // FIX 3: Added event listener for the admin panel tabs to make them functional.
+            adminModal.addEventListener('click', e => {
+                if (e.target.classList.contains('admin-tab-btn')) {
+                    switchTab(e.target.dataset.tab);
+                }
+            });
+            
+            // FIX 4: Added event listener for the "Show All Activity" button.
+            document.getElementById('show-all-activity-btn').addEventListener('click', () => {
+                activityLogFilter = null;
+                renderActivityLogTab();
+            });
+
 
             function renderAdminPanel() {
                 switchTab('user-management');
@@ -729,4 +750,3 @@
     </script>
 </body>
 </html>
-
