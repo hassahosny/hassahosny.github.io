@@ -253,7 +253,6 @@
     <script type="module">
         import { initializeApp, deleteApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
         import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut, createUserWithEmailAndPassword, updatePassword } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-        // FIX 1: Added 'arrayUnion' to the import list to fix the "Add Item" button functionality.
         import { getFirestore, doc, collection, onSnapshot, setDoc, deleteDoc, updateDoc, getDoc, serverTimestamp, increment, addDoc, query, orderBy, limit, writeBatch, getDocs, collectionGroup, arrayUnion } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
         
         document.addEventListener('DOMContentLoaded', () => {
@@ -323,15 +322,42 @@
             const toggle = (el, condition) => el.classList.toggle('hidden', !condition);
             const showNotification = msg => { notificationMessage.innerHTML = msg; show(notificationModal); };
             
+            // --- TELEGRAM NOTIFICATION FUNCTION ---
+            async function sendTelegramNotification(message) {
+                const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
+                const payload = {
+                    chat_id: TELEGRAM_CHAT_ID,
+                    text: message,
+                    parse_mode: 'HTML'
+                };
+
+                try {
+                    await fetch(url, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                } catch (error) {
+                    console.error('Telegram notification failed:', error);
+                }
+            }
 
             // --- NOTIFICATION & LOGGING ---
             async function logActivity(action, details = {}) {
                 const userEmail = auth.currentUser?.email || 'System';
+                
+                // Log to Firestore
                 try {
                     await addDoc(collection(db, `artifacts/${appId}/public/data/activityLog`), {
                         timestamp: serverTimestamp(), user: userEmail, action, details
                     });
                 } catch (e) { console.error("Error logging activity:", e); }
+
+                // Send Telegram Notification
+                const timestamp = new Date().toLocaleString('ar-EG', { timeZone: 'Africa/Cairo' });
+                let detailsString = Object.entries(details).map(([key, value]) => `${key}: ${value}`).join('\n- ');
+                const notificationMessage = `<b>🔔 نشاط جديد | سايبر كيان</b>\n\n- <b>المستخدم:</b> ${userEmail}\n- <b>الحدث:</b> ${action}\n${detailsString ? `- <b>التفاصيل:</b>\n- ${detailsString}` : ''}\n\n- <b>الوقت:</b> ${timestamp}`;
+                await sendTelegramNotification(notificationMessage);
             }
             
             // --- DATA LISTENERS ---
@@ -658,7 +684,6 @@
                 document.getElementById('cancel-add-item').addEventListener('click', () => hide(addItemModal));
                 document.getElementById('cancel-end-session').addEventListener('click', () => hide(endSessionModal));
                 
-                 // FIX 2: Added event listener for the summary modal close button.
                  document.getElementById('close-summary-modal').addEventListener('click', () => hide(summaryModal));
             }
 
@@ -694,14 +719,12 @@
             });
             document.getElementById('close-admin-modal').addEventListener('click', () => hide(adminModal));
 
-            // FIX 3: Added event listener for the admin panel tabs to make them functional.
             adminModal.addEventListener('click', e => {
                 if (e.target.classList.contains('admin-tab-btn')) {
                     switchTab(e.target.dataset.tab);
                 }
             });
             
-            // FIX 4: Added event listener for the "Show All Activity" button.
             document.getElementById('show-all-activity-btn').addEventListener('click', () => {
                 activityLogFilter = null;
                 renderActivityLogTab();
@@ -750,3 +773,4 @@
     </script>
 </body>
 </html>
+
