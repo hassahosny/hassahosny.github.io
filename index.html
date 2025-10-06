@@ -598,6 +598,9 @@
                 }
             }
             
+            // --- EVENT LISTENERS ---
+            notificationOkBtn.addEventListener('click', () => hide(notificationModal));
+
             devicesContainer.addEventListener('click', (e) => {
                 const btn = e.target.closest('button');
                 if (!btn || btn.disabled) return;
@@ -616,6 +619,14 @@
                     currentDeviceToAddItem = deviceName;
                     document.getElementById('item-list').innerHTML = Object.entries(itemPrices).map(([name, price]) => `<button class="item-select-btn w-full text-right p-3 rounded bg-gray-700 hover:bg-primary hover:text-black" data-name="${name}" data-price="${price}">${name} - ${price.toFixed(2)} EGP</button>`).join('');
                     show(addItemModal);
+                }
+            });
+
+            startSessionModal.addEventListener('click', (e) => {
+                if (e.target.classList.contains('time-option-btn')) {
+                    document.querySelectorAll('.time-option-btn').forEach(btn => btn.classList.replace('btn-primary', 'btn-secondary'));
+                    e.target.classList.replace('btn-secondary', 'btn-primary');
+                    toggle(document.getElementById('manual-time-input-container'), e.target.dataset.minutes === 'manual');
                 }
             });
 
