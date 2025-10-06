@@ -231,7 +231,28 @@
             </div>
             <!-- Tab Content -->
             <div class="flex-grow overflow-y-auto">
-                 <div id="user-management-tab" class="admin-tab-content"><h4 class="text-xl font-bold mb-4">إدارة المستخدمين</h4><div id="user-list-container" class="space-y-4"></div></div>
+                 <div id="user-management-tab" class="admin-tab-content">
+                    <h4 class="text-xl font-bold mb-4">إدارة المستخدمين</h4>
+                    <div id="user-list-container" class="space-y-4"></div>
+                    <div class="mt-8 border-t border-gray-700 pt-6">
+                        <h4 class="text-xl font-bold mb-4">إضافة موظف جديد</h4>
+                        <form id="add-user-form" class="space-y-4 bg-gray-800 p-4 rounded-lg max-w-md">
+                            <div>
+                                <label for="new-user-name" class="block mb-1">اسم الموظف</label>
+                                <input type="text" id="new-user-name" class="bg-gray-700 w-full p-2 rounded" required>
+                            </div>
+                            <div>
+                                <label for="new-user-email" class="block mb-1">إيميل الموظف</label>
+                                <input type="email" id="new-user-email" class="bg-gray-700 w-full p-2 rounded" required>
+                            </div>
+                            <div>
+                                <label for="new-user-password" class="block mb-1">كلمة المرور</label>
+                                <input type="password" id="new-user-password" class="bg-gray-700 w-full p-2 rounded" required>
+                            </div>
+                            <button type="submit" class="btn-primary px-4 py-2 rounded-lg font-bold">إضافة الموظف</button>
+                        </form>
+                    </div>
+                </div>
                  <div id="shift-history-tab" class="admin-tab-content hidden"><h4 class="text-xl font-bold mb-4">سجل الشيftات</h4><div id="shift-history-container" class="space-y-4"></div></div>
                  <div id="activity-log-tab" class="admin-tab-content hidden">
                     <div class="flex justify-between items-center mb-4"><h4 id="activity-log-title" class="text-xl font-bold"></h4><button id="show-all-activity-btn" class="btn-secondary px-4 py-1 rounded hidden">عرض الكل</button></div>
@@ -766,6 +787,33 @@
                 }
             });
             
+            adminModal.addEventListener('submit', (e) => {
+                if (e.target.id === 'add-user-form') {
+                    e.preventDefault();
+                    const nameInput = document.getElementById('new-user-name');
+                    const emailInput = document.getElementById('new-user-email');
+                    const passwordInput = document.getElementById('new-user-password');
+                    const name = nameInput.value.trim();
+                    const email = emailInput.value.trim();
+                    const password = passwordInput.value.trim();
+                    if (appState.users[email]) {
+                        showNotification(`خطأ: المستخدم '${email}' موجود بالفعل.`);
+                        return;
+                    }
+                    if (password.length < 6) {
+                        showNotification('كلمة المرور يجب أن تكون 6 أحرف على الأقل.');
+                        return;
+                    }
+                    appState.users[email] = { password, name };
+                    saveState();
+                    logActivity('إضافة موظف جديد', { newUser: email });
+                    showNotification(`تمت إضافة الموظف '${name}' بنجاح.`);
+                    e.target.reset();
+                    renderUserManagementTab();
+                }
+            });
+
+
             adminPanelBtn.addEventListener('click', () => {
                 activityLogFilter = null;
                 renderAdminPanel();
@@ -909,5 +957,4 @@
     </script>
 </body>
 </html>
-
 
