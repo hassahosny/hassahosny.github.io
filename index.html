@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -326,7 +327,7 @@
             }
 
             // --- NOTIFICATION & LOGGING ---
-            async function sendTelegramNotification(message) {
+            async function sendTelegramNotification(action, user, details) {
                 const botToken = TELEGRAM_BOT_TOKEN;
                 const chatId = TELEGRAM_CHAT_ID;
 
@@ -334,16 +335,50 @@
                     console.warn("Telegram settings are not configured in the code.");
                     return;
                 }
-                const url = `https://api.telegram.org/bot${botToken}/sendMessage`;
-                const cleanMessage = message.replace(/<b>/g, '*').replace(/<\/b>/g, '*'); // Use Markdown for Telegram
 
+                let mainMessage = `👤 *الموظف:* ${user}\n✨ *الإجراء:* ${action}`;
+
+                switch (action) {
+                    case 'بدء جلسة':
+                        const time = details.minutes > 0 ? `${details.minutes} دقيقة` : 'وقت مفتوح';
+                        const sessionType = details.sessionType === 'Single' ? 'فردي' : 'زوجي';
+                        mainMessage += `\n\n*التفاصيل:*\n- الجهاز: ${details.deviceName}\n- العميل: ${details.customerName || 'بدون اسم'}\n- النوع: ${sessionType}\n- الباقة: ${time}`;
+                        break;
+                    case 'إنهاء جلسة':
+                        mainMessage += `\n\n*التفاصيل:*\n- الجهاز: ${details.deviceName}\n- الحساب النهائي: *${details.totalCost}*`;
+                        break;
+                    case 'إضافة منتج':
+                        mainMessage += `\n\n*التفاصيل:*\n- الجهاز: ${details.deviceName}\n- المنتج: ${details.itemName} (${details.itemPrice})`;
+                        break;
+                    case 'بدء الشيفت':
+                        mainMessage = `✅ *${user}* بدأ شيفت جديد.`;
+                        break;
+                    case 'إنهاء الشيفت':
+                        mainMessage = `🏁 *${user}* أنهى الشيفت.\n\n*ملخص الشيفت:*\n- الإيرادات: ${details.revenue} جنيه\n- المصروفات: ${details.expenses} جنيه`;
+                        break;
+                    default:
+                        // Generic message for other actions like password change, login, logout
+                        break;
+                }
+
+                const currentRevenue = (appState.financials.revenue || 0).toFixed(2);
+                const availableDevices = kayanDevicesSetup
+                    .filter(d => !appState.sessions[d.name])
+                    .map(d => d.name)
+                    .join(', ');
+
+                const footer = `\n\n➖➖➖➖\n*وضع حالي:*\n💰 *إيراد الشيفت:* ${currentRevenue} جنيه\n🎮 *أجهزة متاحة:* ${availableDevices || 'لا يوجد'}`;
+
+                const finalMessage = mainMessage + footer;
+
+                const url = `https://api.telegram.org/bot${botToken}/sendMessage`;
                 try {
                     const response = await fetch(url, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
                             chat_id: chatId,
-                            text: cleanMessage,
+                            text: finalMessage,
                             parse_mode: 'Markdown'
                         })
                     });
@@ -378,7 +413,7 @@
                     if (details.deviceName) notificationMsg += ` للجهاز ${details.deviceName}`;
                     if (details.forUser) notificationMsg += ` للمستخدم ${details.forUser}`;
                     addNotification(notificationMsg);
-                    sendTelegramNotification(notificationMsg);
+                    sendTelegramNotification(action, userEmail, details);
                 }
 
                 saveState();
@@ -560,7 +595,7 @@
                 const totalCost = Math.ceil(timeCost + session.itemCost);
                 appState.financials.revenue += totalCost;
                 delete appState.sessions[deviceName];
-                logActivity('إنهاء جلسة', { deviceName, totalCost: `${totalCost.toFixed(2)} EGP` });
+                logActivity('إنهاء جلسة', { deviceName, totalCost: `${totalCost.toFixed(2)} جنيه` });
                 saveState(); renderAll();
                 showNotification(`تم إنهاء الجلسة لجهاز ${deviceName}<br>الإجمالي المطلوب: ${totalCost.toFixed(2)} جنيه`);
             }
@@ -570,7 +605,7 @@
                 if (session) {
                     session.itemCost += itemPrice;
                     session.items.push(itemName);
-                    logActivity('إضافة منتج', { deviceName, itemName, itemPrice: `${itemPrice.toFixed(2)} EGP` });
+                    logActivity('إضافة منتج', { deviceName, itemName, itemPrice: `${itemPrice.toFixed(2)} جنيه` });
                     saveState(); renderAll(); hideAddItemModal();
                 } else { showNotification("حدث خطأ أثناء إضافة المنتج."); }
             }
@@ -875,5 +910,4 @@
     </script>
 </body>
 </html>
-
 
