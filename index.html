@@ -324,6 +324,10 @@
             
             // --- TELEGRAM NOTIFICATION FUNCTION ---
             async function sendTelegramNotification(message) {
+                if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) {
+                    console.warn("Telegram token or chat ID is not configured. Skipping notification.");
+                    return;
+                }
                 const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
                 const payload = {
                     chat_id: TELEGRAM_CHAT_ID,
@@ -332,13 +336,18 @@
                 };
 
                 try {
-                    await fetch(url, {
+                    const response = await fetch(url, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(payload)
                     });
+
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        console.error('Telegram API Error:', errorData.description);
+                    }
                 } catch (error) {
-                    console.error('Telegram notification failed:', error);
+                    console.error('Telegram notification failed (Network Error):', error);
                 }
             }
 
@@ -355,8 +364,14 @@
 
                 // Send Telegram Notification
                 const timestamp = new Date().toLocaleString('ar-EG', { timeZone: 'Africa/Cairo' });
-                let detailsString = Object.entries(details).map(([key, value]) => `${key}: ${value}`).join('\n- ');
-                const notificationMessage = `<b>🔔 نشاط جديد | سايبر كيان</b>\n\n- <b>المستخدم:</b> ${userEmail}\n- <b>الحدث:</b> ${action}\n${detailsString ? `- <b>التفاصيل:</b>\n- ${detailsString}` : ''}\n\n- <b>الوقت:</b> ${timestamp}`;
+                // Correctly format details for HTML, using <br> for new lines.
+                let detailsString = Object.entries(details)
+                    .map(([key, value]) => `<b>${key}:</b> ${value}`)
+                    .join('<br>- ');
+
+                // Use <br> for all newlines in the message for HTML parse mode.
+                const notificationMessage = `<b>🔔 نشاط جديد | سايبر كيان</b><br><br><b>المستخدم:</b> ${userEmail}<br><b>الحدث:</b> ${action}<br>${detailsString ? `<b>التفاصيل:</b><br>- ${detailsString}` : ''}<br><br><b>الوقت:</b> ${timestamp}`;
+                
                 await sendTelegramNotification(notificationMessage);
             }
             
