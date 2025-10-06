@@ -187,28 +187,6 @@
             <button id="notification-ok-btn" class="btn-primary px-8 py-2 rounded-lg font-bold">حسنًا</button>
         </div>
     </div>
-    
-    <div id="telegram-setup-modal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-[70] hidden">
-        <div class="bg-panel rounded-lg shadow-lg p-6 w-full max-w-lg text-center">
-            <h3 class="text-xl font-bold mb-4 text-primary">إعداد إشعارات التليجرام</h3>
-            <p class="mb-6 text-gray-300">لتلقي الإشعارات الفورية، يرجى إدخال بيانات بوت التليجرام الخاص بك.</p>
-            <form id="telegram-setup-form" class="space-y-4">
-                <div>
-                    <label for="bot-token-input" class="block text-right mb-1">توكن البوت (Bot Token)</label>
-                    <input type="text" id="bot-token-input" class="bg-gray-700 w-full p-2 rounded text-left" dir="ltr" required>
-                </div>
-                <div>
-                    <label for="chat-id-input" class="block text-right mb-1">معرف المحادثة (Chat ID)</label>
-                    <input type="text" id="chat-id-input" class="bg-gray-700 w-full p-2 rounded text-left" dir="ltr" required>
-                </div>
-                <div class="flex justify-end gap-4 pt-4">
-                     <button type="button" id="skip-telegram-setup" class="btn-secondary px-6 py-2 rounded-lg">تخطي الآن</button>
-                    <button type="submit" class="btn-primary px-6 py-2 rounded-lg font-bold">حفظ الإعدادات</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
 
     <!-- Admin Panel Modal -->
     <div id="admin-modal" class="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-[60] hidden">
@@ -222,7 +200,6 @@
                 <button class="admin-tab-btn flex-1 py-2 text-center border-b-2 border-primary" data-tab="user-management">إدارة المستخدمين</button>
                 <button class="admin-tab-btn flex-1 py-2 text-center border-b-2 border-transparent text-gray-400" data-tab="shift-history">سجل الشيفتات</button>
                 <button class="admin-tab-btn flex-1 py-2 text-center border-b-2 border-transparent text-gray-400" data-tab="activity-log">سجل النشاط</button>
-                <button class="admin-tab-btn flex-1 py-2 text-center border-b-2 border-transparent text-gray-400" data-tab="telegram-settings">إعدادات التليجرام</button>
             </div>
             <!-- Tab Content -->
             <div class="flex-grow overflow-y-auto">
@@ -232,20 +209,6 @@
                     <div class="flex justify-between items-center mb-4"><h4 id="activity-log-title" class="text-xl font-bold"></h4><button id="show-all-activity-btn" class="btn-secondary px-4 py-1 rounded hidden">عرض الكل</button></div>
                     <div id="activity-log-container" class="space-y-2 font-mono text-sm pr-2"></div>
                 </div>
-                <div id="telegram-settings-tab" class="admin-tab-content hidden">
-                     <h4 class="text-xl font-bold mb-4">إعدادات إشعارات التليجرام</h4>
-                     <form id="telegram-settings-form" class="space-y-4 max-w-lg">
-                        <div>
-                            <label for="bot-token-setting" class="block mb-1">توكن البوت (Bot Token)</label>
-                            <input type="text" id="bot-token-setting" class="bg-gray-700 w-full p-2 rounded text-left" dir="ltr">
-                        </div>
-                        <div>
-                            <label for="chat-id-setting" class="block mb-1">معرف المحادثة (Chat ID)</label>
-                            <input type="text" id="chat-id-setting" class="bg-gray-700 w-full p-2 rounded text-left" dir="ltr">
-                        </div>
-                        <button type="submit" class="btn-primary px-6 py-2 rounded-lg font-bold">حفظ التغييرات</button>
-                    </form>
-                </div>
             </div>
         </div>
     </div>
@@ -253,6 +216,14 @@
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const adminEmail = "admin@kayan.com";
+
+            // --- !!! إعدادات بوت التليجرام - مهم جداً !!! ---
+            // --- !!! Telegram Bot Settings - VERY IMPORTANT !!! ---
+            // استبدل القيم التالية بالتوكن والمعرف الخاص بك
+            // Replace the following values with your own Bot Token and Chat ID
+            const TELEGRAM_BOT_TOKEN = '7579810847:AAFwgE2cpCsakNt_pHZYOD1g3Db8sUYJ86I'; // ضعه هنا TOKEN الخاص بالبوت
+            const TELEGRAM_CHAT_ID = '6325158235';     // ضعه هنا ID الخاص بك
+
 
             const kayanDevicesSetup = [
                 { name: "PS7", type: "PlayStation_Premium" }, { name: "PS8", type: "PlayStation_Premium" },
@@ -281,7 +252,6 @@
             const endSessionModal = document.getElementById('end-session-modal');
             const notificationModal = document.getElementById('notification-modal');
             const adminModal = document.getElementById('admin-modal');
-            const telegramSetupModal = document.getElementById('telegram-setup-modal');
 
             const notificationMessage = document.getElementById('notification-message');
             const notificationOkBtn = document.getElementById('notification-ok-btn');
@@ -316,8 +286,7 @@
                             "test@kayan.com": { password: "123456", name: "موظف مؤقت" }
                         },
                         activityLog: [],
-                        notifications: [],
-                        telegram: { botToken: '', chatId: '' }
+                        notifications: []
                     };
                 }
                 // Backward compatibility
@@ -326,16 +295,17 @@
                 if (typeof appState.shiftActive === 'undefined') appState.shiftActive = false;
                 if (!appState.shiftHistory) appState.shiftHistory = [];
                 if (!appState.notifications) appState.notifications = [];
-                if (!appState.telegram) appState.telegram = { botToken: '', chatId: '' };
 
                 renderAll();
             }
 
             // --- NOTIFICATION & LOGGING ---
             async function sendTelegramNotification(message) {
-                const { botToken, chatId } = appState.telegram;
-                if (!botToken || !chatId) {
-                    console.warn("Telegram settings are not configured.");
+                const botToken = TELEGRAM_BOT_TOKEN;
+                const chatId = TELEGRAM_CHAT_ID;
+
+                if (!botToken || !chatId || botToken === 'YOUR_BOT_TOKEN_HERE') {
+                    console.warn("Telegram settings are not configured in the code.");
                     return;
                 }
                 const url = `https://api.telegram.org/bot${botToken}/sendMessage`;
@@ -394,12 +364,6 @@
                 if (loggedInUser && appState.users[loggedInUser]) {
                     showAppUI(appState.users[loggedInUser].name);
                     loadState();
-
-                    // Prompt for Telegram setup if admin and not configured
-                    if (loggedInUser === adminEmail && (!appState.telegram.botToken || !appState.telegram.chatId)) {
-                        telegramSetupModal.classList.remove('hidden');
-                    }
-
                 } else {
                     showLoginUI();
                 }
@@ -648,20 +612,6 @@
                 startSession(currentDeviceToStart.name, currentDeviceToStart.type, sessionType, minutes, customerName);
             });
 
-             // --- TELEGRAM SETUP ---
-            document.getElementById('telegram-setup-form').addEventListener('submit', (e) => {
-                e.preventDefault();
-                appState.telegram.botToken = document.getElementById('bot-token-input').value;
-                appState.telegram.chatId = document.getElementById('chat-id-input').value;
-                saveState();
-                telegramSetupModal.classList.add('hidden');
-                showNotification("تم حفظ إعدادات التليجرام بنجاح.");
-            });
-             document.getElementById('skip-telegram-setup').addEventListener('click', () => {
-                telegramSetupModal.classList.add('hidden');
-            });
-
-
             // --- ADMIN & NOTIFICATION PANEL ---
             function renderNotifications() {
                 const unreadCount = appState.notifications.filter(n => !n.read).length;
@@ -697,7 +647,6 @@
                 renderUserManagementTab();
                 renderActivityLogTab();
                 renderShiftHistoryTab();
-                renderTelegramSettingsTab();
                 switchTab('user-management');
             }
             
@@ -800,19 +749,6 @@
                         </div>`;
                  }).join('') || `<p class="text-gray-500">لا يوجد شيفتات مسجلة بعد.</p>`;
             }
-
-            function renderTelegramSettingsTab() {
-                document.getElementById('bot-token-setting').value = appState.telegram.botToken || '';
-                document.getElementById('chat-id-setting').value = appState.telegram.chatId || '';
-            }
-
-            document.getElementById('telegram-settings-form').addEventListener('submit', (e) => {
-                 e.preventDefault();
-                appState.telegram.botToken = document.getElementById('bot-token-setting').value;
-                appState.telegram.chatId = document.getElementById('chat-id-setting').value;
-                saveState();
-                showNotification("تم حفظ إعدادات التليجرام بنجاح.");
-            });
 
             document.getElementById('show-all-activity-btn').addEventListener('click', () => {
                 activityLogFilter = null;
