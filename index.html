@@ -320,17 +320,12 @@
             const show = el => el.classList.remove('hidden');
             const hide = el => el.classList.add('hidden');
             const toggle = (el, condition) => el.classList.toggle('hidden', !condition);
+            const showNotification = msg => { notificationMessage.innerHTML = msg; show(notificationModal); };
+            notificationOkBtn.addEventListener('click', () => hide(notificationModal));
 
             // --- NOTIFICATION & LOGGING ---
-            async function sendTelegramNotification(action, user, details) {
-                // ... same as before
-            }
-
             async function logActivity(action, details = {}) {
                 const userEmail = auth.currentUser?.email || 'System';
-                if (userEmail !== adminEmail) {
-                    sendTelegramNotification(action, userEmail, details);
-                }
                 try {
                     await addDoc(collection(db, `artifacts/${appId}/public/data/activityLog`), {
                         timestamp: serverTimestamp(), user: userEmail, action, details
@@ -370,9 +365,7 @@
 
                     if (shiftData.active && shiftData.id) {
                         const financialsDocPath = `artifacts/${appId}/public/data/shifts/${shiftData.id}`;
-                        // Ensure financials doc exists
-                        await setDoc(doc(db, financialsDocPath), { active: true }, { merge: true });
-
+                        
                         unsubscribeFinancials = onSnapshot(doc(db, financialsDocPath), financialDoc => {
                             const data = financialDoc.exists() ? financialDoc.data() : { revenue: 0, expenses: 0 };
                             updateFinancialDisplay(data);
@@ -411,21 +404,15 @@
                     if (error.code === 'auth/user-not-found' && email === adminEmail) {
                        try {
                          await createUserWithEmailAndPassword(auth, email, password);
-                         // Also create a user doc for the admin
                          await setDoc(doc(db, `artifacts/${appId}/public/data/users`, adminEmail), {
-                           name: 'المدير',
-                           email: adminEmail,
-                           role: 'admin'
+                           name: 'المدير', email: adminEmail, role: 'admin'
                          });
                        } catch(createError) {
-                          console.error("Admin creation failed:", createError);
                           loginError.textContent = "فشل إنشاء حساب المدير.";
                        }
                     } else if (error.code === 'auth/invalid-credential' || error.code === 'auth/wrong-password') {
                         loginError.textContent = 'الإيميل أو كلمة المرور غير صحيحة.';
-                    }
-                    else {
-                        console.error("Login Error:", error)
+                    } else {
                         loginError.textContent = 'حدث خطأ غير متوقع.';
                     }
                 }
@@ -538,8 +525,8 @@
                         return;
                     }
                     const shiftId = shiftDoc.data().id;
-                    const shiftFinancialsRef = doc(db, `artifacts/${appId}/public/data/shifts`, shiftId);
-                    await updateDoc(shiftFinancialsRef, {
+                    const shiftRef = doc(db, `artifacts/${appId}/public/data/shifts`, shiftId);
+                    await updateDoc(shiftRef, {
                         endTime: serverTimestamp(),
                         active: false
                     });
@@ -588,8 +575,8 @@
                 const timeCost = ((new Date() - session.startTime.toDate()) / 3600000) * (deviceRates[session.deviceType]?.[session.sessionType] || 0);
                 const totalCost = Math.ceil(timeCost + session.itemCost);
 
-                const shiftFinancialsRef = doc(db, `artifacts/${appId}/public/data/shifts`, shiftId);
-                await updateDoc(shiftFinancialsRef, { revenue: increment(totalCost) });
+                const shiftRef = doc(db, `artifacts/${appId}/public/data/shifts`, shiftId);
+                await updateDoc(shiftRef, { revenue: increment(totalCost) });
                 
                 await deleteDoc(sessionDocRef);
                 logActivity('إنهاء جلسة', { deviceName, totalCost: `${totalCost.toFixed(2)} جنيه` });
@@ -624,7 +611,6 @@
                 const email = document.getElementById('new-user-email').value;
                 const password = document.getElementById('new-user-password').value;
                 
-                // Use a secondary app to create user without logging out admin
                 const tempAppName = 'temp-user-creation-app-' + Date.now();
                 const tempApp = initializeApp(firebaseConfig, tempAppName);
                 const tempAuth = getAuth(tempApp);
@@ -632,30 +618,66 @@
                 try {
                     await createUserWithEmailAndPassword(tempAuth, email, password);
                     
-                    // Store user's name/role in Firestore
                     await setDoc(doc(db, `artifacts/${appId}/public/data/users`, email), {
-                        name: name,
-                        email: email,
-                        role: 'employee'
+                        name: name, email: email, role: 'employee'
                     });
 
                     showNotification(`تم إنشاء الموظف ${name} بنجاح.`);
                     logActivity("إضافة موظف", { newUser: email });
-                    document.getElementById('add-user-form').reset();
+                    e.target.reset();
                 } catch (error) {
-                    console.error("Error creating user:", error);
                     showNotification(`خطأ: ${error.message}`);
                 } finally {
                     await deleteApp(tempApp);
                 }
             });
-            // ... rest of admin panel logic
+            
+            adminPanelBtn.addEventListener('click', () => {
+                renderAdminPanel();
+                show(adminModal);
+            });
+            document.getElementById('close-admin-modal').addEventListener('click', () => hide(adminModal));
+
+            function renderAdminPanel() {
+                switchTab('user-management');
+                if (unsubscribeUsers) unsubscribeUsers();
+                unsubscribeUsers = onSnapshot(collection(db, `artifacts/${appId}/public/data/users`), snapshot => {
+                    const users = [];
+                    snapshot.forEach(doc => users.push(doc.data()));
+                    renderUserManagementTab(users);
+                });
+            }
+
+            function switchTab(tabId) {
+                document.querySelectorAll('.admin-tab-btn').forEach(btn => {
+                    const isSelected = btn.dataset.tab === tabId;
+                    toggle(btn, isSelected, 'border-primary', 'border-transparent');
+                    btn.classList.toggle('text-gray-400', !isSelected);
+                });
+                document.querySelectorAll('.admin-tab-content').forEach(content => {
+                    toggle(content, content.id === `${tabId}-tab`);
+                });
+
+                if (tabId === 'activity-log') renderActivityLogTab();
+                if (tabId === 'shift-history') renderShiftHistoryTab();
+            }
+
+            function renderUserManagementTab(users) {
+                const container = document.getElementById('user-list-container');
+                container.innerHTML = users.map(user => `
+                    <div class="bg-gray-800 p-4 rounded-lg flex justify-between items-center">
+                        <div>
+                            <p class="font-bold">${user.name}</p>
+                            <p class="text-sm text-gray-400">${user.email}</p>
+                        </div>
+                    </div>`
+                ).join('');
+            }
             
             // --- INITIALIZATION ---
-            // Initial checks...
+            // ...
         });
     </script>
 </body>
 </html>
-
 
