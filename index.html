@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>تحميل الأغاني (V2)</title>
-    <!-- تحميل Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap');
@@ -23,7 +22,6 @@
         </div>
 
         <div class="space-y-6">
-            <!-- الخطوة 1: التحليل -->
             <div>
                 <label for="url-input" class="block text-sm font-medium text-gray-300 mb-2">رابط الأغنية</label>
                 <input type="url" id="url-input" placeholder="https://www.youtube.com/watch?v=..."
@@ -33,22 +31,18 @@
             <button id="analyze-btn"
                     class="w-full p-3 bg-blue-600 hover:bg-blue-700 rounded-lg text-white font-semibold text-lg transition duration-200 ease-in-out transform hover:-translate-y-1 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed">
                 <span id="analyze-btn-text">تحليل الرابط</span>
-                <!-- سبينر التحليل -->
                 <svg id="analyze-spinner" class="animate-spin h-5 w-5 text-white hidden mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
             </button>
 
-            <!-- منطقة عرض الحالة -->
             <div id="status-container" class="mt-6 text-center space-y-4">
                 
-                <!-- رسالة الخطأ (عامة) -->
                 <div id="error-message" class="hidden p-3 bg-red-800 border border-red-600 text-red-200 rounded-lg">
                     <p>حدث خطأ.</p>
                 </div>
 
-                <!-- الخطوة 2: التأكيد والتحميل (مخفي افتراضياً) -->
                 <div id="confirmation-area" class="hidden p-4 bg-gray-700 border border-gray-600 rounded-lg space-y-4">
                     <p class="font-medium text-gray-300">تم العثور على الأغنية:</p>
                     <p id="song-title" class="text-lg font-semibold text-white break-words"></p>
@@ -57,7 +51,6 @@
                     <button id="confirm-download-btn"
                             class="w-full p-3 bg-green-600 hover:bg-green-700 rounded-lg text-white font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed">
                         <span id="download-btn-text">نعم، تأكيد التحميل</span>
-                        <!-- سبينر التحميل -->
                         <svg id="download-spinner" class="animate-spin h-5 w-5 text-white hidden mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
@@ -65,7 +58,6 @@
                     </button>
                 </div>
 
-                <!-- الخطوة 3: رابط التحميل النهائي (مخفي افتراضياً) -->
                 <div id="success-message" class="hidden p-4 bg-green-800 border border-green-600 text-green-200 rounded-lg space-y-3">
                     <p class="font-semibold">✅ اكتمل التحميل بنجاح!</p>
                     <a id="download-link" href="#" download="song.mp3"
@@ -96,7 +88,11 @@
         const successMessage = document.getElementById('success-message');
         const downloadLink = document.getElementById('download-link');
         
-        const API_BASE_URL = '41.238.33.146';
+        // ====================================================================
+        //  <<< !!! التعديل الوحيد تم هنا !!! >>>
+        // ====================================================================
+        const API_BASE_URL = 'https://ave-bookstore-stake-brought.trycloudflare.com';
+        // ====================================================================
 
         // --- دالة لإدارة الحالات ---
         function showState(state, data = {}) {
@@ -142,7 +138,8 @@
             }
             else if (state === 'success') {
                 successMessage.classList.remove('hidden');
-                downloadLink.download = data.fileName || 'song.mp3';
+                // الكود بتاعك هنا سليم 100% وبيستخدم الاسم اللي جاي من السيرفر
+                downloadLink.download = data.fileName || 'song.mp3'; 
                 downloadLink.href = API_BASE_URL + data.fileUrl; 
             }
         }
@@ -216,5 +213,3 @@
 
 </body>
 </html>
-
-
